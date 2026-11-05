@@ -1,0 +1,57 @@
+# Node
+node_modules/
+dist/
+build/
+.cache/
+
+# Expo
+.expo/
+.web/
+*.expo
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.ncr*
+*.mdmp*
+*.pdb
+*.log
+*.swp
+*.tmp
+
+# Platform
+*.native
+
+# Mobile
+*.mobile
+
+# Env
+.env
+.env.local
+.env.*.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+.nyc_output/
+.coverage/
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Production
+.ci/
+*.ci
