@@ -5,6 +5,8 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue)](https://expo.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Language](https://img.shields.io/badge/language-Typescript%20%7C%20Node.js-blue)](https://www.typescriptlang.org/)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/Regimarcilio/trilhajr-app)
+[![Star](https://img.shields.io/github/stars/Regimarcilio/trilhajr-app?style=for-the-badge&color=FFD700)](https://github.com/Regimarcilio/trilhajr-app)
 
 ---
 
@@ -201,20 +203,34 @@ docker-compose up -d
 
 ---
 
+## 🛠️ Tecnologias
+
+### Instalação Rápida
+```bash
+git clone https://github.com/Regimarcilio/trilhajr-app.git
+cd trilhajr-app/mobile-app
+npm install && npx expo start
+```
+
+### Links Úteis
+- 📱 [Protótipo Online](design-system/prototipo.html)
+- 📚 [Documentação Completa](docs/)
+
+---
+
 ## 🏗️ Roadmap
 
 ```mermaid
 timeline
     title Roadmap TrilhaJr
-    Q1 2025 : MVP completo
+    Q1 2026 : MVP completo
               : App Store + Play Store
-              : 1000 PDFs processados
-    Q2 2025 : Integração LinkedIn
-              : Versão Free limitada
-              : Afiliados ativados
-    Q3 2025 : Suporte DOCX
-              : Templates personalizados
-              : 10.000 usuários ativos
+    Q2 2026 : API estável
+              : Pagamento automático
+              : 100 PDFs processados
+    Q3 2026 : Marketing
+              : Campanhas afiliados
+              : 5000 usuário ativos
 ```
 
 ---
