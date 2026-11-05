@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  mobile:
+    build: ./mobile-app
+    ports:
+      - "19006:19006"  # Expo DevTools
+      - "19000:19000"  # Metro bundler
+    volumes:
+      - ./mobile-app:/app
+      - /app/node_modules
+    environment:
+      - EXPO_DEVTOOLS_HTTP_PORT=19006
+    working_dir: /app
+
+  backend-api:
+    build: ./backend-api
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend-api:/app
+      - ./backend-api/uploads:/app/uploads
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    working_dir: /app
+    depends_on:
+      - redis
+
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
