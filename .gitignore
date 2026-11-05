@@ -1,0 +1,35 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Temp
+*.tmp
+*.temp
+*.log
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Test
+coverage/
+.nyc_output/
