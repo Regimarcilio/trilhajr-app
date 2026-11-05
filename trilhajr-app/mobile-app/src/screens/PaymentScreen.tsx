@@ -1,302 +1,274 @@
-// Tela de Pagamento Pix
+// Tela de Pagamento PagSeguro (Web)
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppStore } from '@/store/appStore';
 import { api } from '@/services/api';
 import { Button } from '@/components/Button';
-import { COLORS, SPACING, FONT_SIZES, FONT_WEIGHTS, APP_CONFIG, ANIMATION_DURATION } from '@/constants';
+import { COLORS, SPACING, FONT_SIZES, FONT_WEIGHTS, APP_CONFIG } from '@/constants';
 
-interface QRCodeComponentProps {
-  value: string;
-  size?: number;
-}
-
-// Componente QR Code mock (em produção usar react-native-qrcode-svg)
-const QRCode: React.FC<QRCodeComponentProps> = ({ value, size = 200 }) => {
-  // Simula QR Code - em produção usar biblioteca real
-  return (
-    <View style={{ width: size, height: size, backgroundColor: COLORS.white }}>
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: COLORS.gray[300],
-        borderRadius: 8,
-      }}>
-        <Text style={{ fontSize: 12, color: COLORS.gray[600], textAlign: 'center' }}>
-          QR CODE
-        </Text>
-        <Text style={{ fontSize: 10, color: COLORS.gray[500], marginTop: 4 }}>
-          {value.substring(0, 30)}...
-        </Text>
-      </View>
-    </View>
-  );
-};
+// PagSeguro Web Checkout - mais simples de integrar
+// Usa iframe ou redirect em web, ou SDK nativo
+const PAGSEGURO_EMAIL = 'contato@trilhajr.app';
+const PAGSEGURO_TOKEN = 'seu-token-aqui';
 
 export const PaymentScreen: React.FC = () => {
   const { pdfFile, paymentStatus, setPaymentStatus, setCurrentScreen } = useAppStore();
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [countdown, setCountdown] = useState(15 * 60); // 15 minutos
   const [isProcessing, setIsProcessing] = useState(true);
+  const [paymentLink, setPaymentLink] = useState<string>('');
 
   useEffect(() => {
-    // Verificar se PDF foi carregado
     if (!pdfFile) {
       Alert.alert('Erro', 'Nenhum PDF foi selecionado', [{ text: 'OK' }]);
       setCurrentScreen('upload');
       return;
     }
 
-    // Criar pagamento
-    createPayment();
-
-    // Timer de expiração
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
+    createPagSeguroPayment();
   }, []);
 
-  const createPayment = async () => {
+  const createPagSeguroPayment = async () => {
     try {
       setIsProcessing(true);
+
+      // Mock PagSeguro - em produção, chamar backend que gera checkout PagSeguro
+      // PagSeguro usa: /checkout/order
+      const mockPaymentId = `TR-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       
-      // Em produção, chamar API real
-      // const response = await api.post('/payment/pix', { 
-      //   pdfId: pdfFile.id, 
-      //   customerId: 'temp_customer' 
-      // });
+      // Link de pagamento PagSeguro (sandbox ou produção)
+      const link = `https://pagseguro.uol.com.br/checkout?code=${mockPaymentId}`;
       
-      // Mock da resposta para desenvolvimento
-      const mockPaymentId = `pay_${Date.now()}`;
-      const mockQrCodeBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51...';
+      setPaymentLink(link);
       
       setPaymentStatus({
         status: 'pending',
         paymentId: mockPaymentId,
-        qrCodeBase64: mockQrCodeBase64,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       });
 
-      setQrCodeUrl(mockQrCodeBase64);
     } catch (error) {
-      console.error('Erro ao criar pagamento:', error);
-      Alert.alert('Erro', 'Não foi possível criar o pagamento. Tente novamente.');
+      console.error('Erro no pagamento:', error);
+      Alert.alert('Erro', 'Não foi possível iniciar o pagamento');
       setCurrentScreen('upload');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleConfirmPayment = async () => {
-    try {
-      // Em produção, verificar status real via webhook
-      // Simulação de pagamento confirmado
-      setPaymentStatus({
-        ...paymentStatus,
-        status: 'confirmed',
-      });
-
-      // Navegar para resultado após breve delay
-      setTimeout(() => {
-        setCurrentScreen('result');
-      }, 1500);
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível confirmar o pagamento.');
+  const handlePayNow = () => {
+    // Em web: redireciona para PagSeguro
+    if (Platform.OS === 'web') {
+      window.location.href = paymentLink;
+    } else {
+      // Em mobile: abrir WebView ou app PagSeguro
+      Alert.alert(
+        'PagSeguro',
+        'Você será redirecionado para o PagSeguro para concluir o pagamento.\n\nValor: R$ 4,90',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Pagar com PagSeguro',
+            onPress: () => {
+              // Aqui abriria um WebView ou link
+              console.log('Abrir PagSeguro:', paymentLink);
+            }
+          }
+        ]
+      );
     }
   };
 
-  const handleRetryPayment = () => {
-    setPaymentStatus({ status: 'pending' });
-    setCountdown(15 * 60);
+  const handleConfirmPayment = () => {
+    setPaymentStatus({ ...paymentStatus, status: 'confirmed' });
+    setTimeout(() => setCurrentScreen('result'), 1500);
   };
 
-  const renderStatusContent = () => {
-    switch (paymentStatus.status) {
-      case 'pending':
-        return (
+  return (
+    <LinearGradient colors={COLORS.gradient} style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Pagamento Seguro</Text>
+          <Text style={styles.subtitle}>TrilhaJr - PagSeguro</Text>
+        </View>
+
+        {/* Conteúdo */}
+        {isProcessing ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={COLORS.white} />
+            <Text style={styles.processingText}>Preparando pagamento...</Text>
+          </View>
+        ) : (
           <>
-            <Text style={styles.title}>Pagamento via Pix</Text>
-            <Text style={styles.subtitle}>
-              Valor: R$ {APP_CONFIG.price.toFixed(2).replace('.', ',')}
-            </Text>
-            
-            {/* QR Code */}
+            {/* QR Code ou Cartão */}
             <View style={styles.qrContainer}>
-              <QRCode value={paymentStatus.paymentId || 'loading'} size={180} />
+              <Text style={styles.qrLabel}>
+                📱 Pague com PagSeguro
+              </Text>
+              
+              {/* QR Code PagSeguro - placeholder */}
+              <View style={styles.qrCodeBox}>
+                <Text style={styles.qrCodeText}>QR CODE</Text>
+                <Text style={styles.qrSubtext}>PagSeguro</Text>
+              </View>
+            </View>
+
+            {/* Dados do pagamento */}
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Produto:</Text>
+                <Text style={styles.summaryValue}>Otimização de Currículo ATS</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Valor:</Text>
+                <Text style={styles.summaryValue}>R$ 4,90</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Documento:</Text>
+                <Text style={styles.summaryValue}>{pdfFile?.name}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Forma de pagamento:</Text>
+                <Text style={styles.summaryValue}>Cartão, Boleto, Pix</Text>
+              </View>
             </View>
 
             {/* Informações */}
             <View style={styles.infoContainer}>
-              <Text style={styles.infoText}>📱 Pague com o app do seu banco</Text>
-              <Text style={styles.infoText}>⏰ Válido por {formatTime(countdown)}</Text>
-              <Text style={styles.infoText}>📄 PDF pronto: {pdfFile?.name}</Text>
+              <Text style={styles.infoText}>✅ Pague uma única vez - sem assinatura</Text>
+              <Text style={styles.infoText}>✅ Seu PDF será entregue imediatamente</Text>
+              <Text style={styles.infoText}>✅ PagSeguro: proteção ao comprador</Text>
             </View>
 
             {/* Botões */}
             <View style={styles.buttonContainer}>
               <Button
-                title="Pagamento Confirmado"
-                onPress={handleConfirmPayment}
+                title="Continuar Pagamento"
+                onPress={handlePayNow}
                 variant="success"
                 size="lg"
               />
-              
               <Button
-                title="Carregar QR Code Novamente"
-                onPress={handleRetryPayment}
+                title="Já Fui Pago"
+                onPress={handleConfirmPayment}
                 variant="outline"
-                size="md"
               />
             </View>
           </>
-        );
-
-      case 'confirmed':
-        return (
-          <>
-            <View style={styles.successIcon}>
-              <Text style={styles.successIconText}>✅</Text>
-            </View>
-            <Text style={styles.title}>Pagamento Confirmado!</Text>
-            <Text style={styles.subtitle}>Processando seu PDF...</Text>
-          </>
-        );
-
-      case 'processing':
-        return (
-          <>
-            <Text style={styles.title}>Processando PDF...</Text>
-            <Text style={styles.subtitle}>Isso pode levar alguns segundos</Text>
-          </>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <LinearGradient colors={COLORS.gradient} style={styles.container}>
-      <View style={styles.content}>
-        {/* Header com voltar */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => setCurrentScreen('upload')}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>← Voltar</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Conteúdo */}
-        <View style={styles.body}>
-          {renderStatusContent()}
-        </View>
+        )}
 
         {/* Footer */}
         <Text style={styles.footerText}>
-          Seus dados permanecem no seu dispositivo. Nenhuma conta necessária.
+          PagSeguro: pagamento rápido e seguro • Cancelamento facilitado
         </Text>
-      </View>
+      </ScrollView>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   content: {
-    flex: 1,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.lg,
-    justifyContent: 'space-between',
   },
   header: {
-    marginBottom: SPACING.md,
-  },
-  backButton: {
-    paddingVertical: SPACING.sm,
-  },
-  backText: {
-    fontSize: FONT_SIZES.md,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: FONT_WEIGHTS.medium,
-  },
-  body: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.xxl,
+    marginBottom: SPACING.xl,
   },
   title: {
     fontSize: FONT_SIZES.xxxl,
     fontWeight: FONT_WEIGHTS.bold,
     color: COLORS.white,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
   },
   subtitle: {
     fontSize: FONT_SIZES.md,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginBottom: SPACING.xl,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 4,
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xxl,
+  },
+  processingText: {
+    color: COLORS.white,
+    marginTop: SPACING.md,
+    fontSize: FONT_SIZES.md,
   },
   qrContainer: {
-    marginBottom: SPACING.xl,
-    backgroundColor: COLORS.white,
-    padding: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.lg,
-  },
-  infoContainer: {
-    marginBottom: SPACING.xxl,
     alignItems: 'center',
-    gap: SPACING.sm,
+    marginBottom: SPACING.xxl,
   },
-  infoText: {
+  qrLabel: {
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.white,
+    marginBottom: SPACING.md,
+    fontWeight: FONT_WEIGHTS.semibold,
+  },
+  qrCodeBox: {
+    width: 180,
+    height: 180,
+    borderWidth: 2,
+    borderColor: COLORS.white,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+  },
+  qrCodeText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHTS.semibold,
+  },
+  qrSubtext: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.gray[500],
+    marginTop: 4,
+  },
+  summaryContainer: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: SPACING.lg,
+    marginBottom: SPACING.xl,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  summaryLabel: {
+    fontSize: FONT_SIZES.md,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  summaryValue: {
     fontSize: FONT_SIZES.md,
     color: COLORS.white,
-    fontWeight: FONT_WEIGHTS.medium,
+    fontWeight: FONT_WEIGHTS.semibold,
+    textAlign: 'right',
+    flex: 1,
+    marginLeft: SPACING.sm,
+  },
+  infoContainer: {
+    backgroundColor: 'rgba(16,185,129,0.2)',
+    borderRadius: 12,
+    padding: SPACING.lg,
+    marginBottom: SPACING.xxl,
+  },
+  infoText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.white,
+    marginBottom: SPACING.xs,
   },
   buttonContainer: {
     gap: SPACING.md,
-  },
-  successIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    ...SHADOWS.lg,
-  },
-  successIconText: {
-    fontSize: 40,
+    marginBottom: SPACING.xxl,
   },
   footerText: {
     fontSize: FONT_SIZES.xs,
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
-    paddingVertical: SPACING.md,
   },
 });
 
-import { BORDER_RADIUS } from '@/constants';
-import { SHADOWS } from '@/constants';
+import { Platform } from 'react-native';
