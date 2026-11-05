@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "TrilhaJr",
-    "slug": "trilhajr",
+    "name": "RecrutadorNow",
+    "slug": "recrutadornow",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.trilhajr.app",
+      "bundleIdentifier": "com.recrutadornow.app",
       "playRequiresAppStoreAttribution": false
     },
     "android": {
@@ -22,15 +22,15 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
-      "package": "com.trilhajr.app",
-      "downloadUrl": "https://trilhajr.com/download"
+      "package": "com.recrutadornow.app",
+      "downloadUrl": "https://recrutadornow.com/download"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "trilhajr-project-id"
+        "projectId": "recrutadornow-project-id"
       }
     }
   }
