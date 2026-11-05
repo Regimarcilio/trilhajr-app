@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecrutadorNow - Download</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3B82F6, #1E3A8A);
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+        }
+        h1 { 
+            font-size: 28px; 
+            color: #1F2937; 
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        .subtitle { 
+            color: #6B7280; 
+            font-size: 16px; 
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-android {
+            background: #3DDC84;
+            color: white;
+        }
+        .btn-android:hover { background: #32D384; transform: translateY(-2px); }
+        
+        .btn-ios {
+            background: #007AFF;
+            color: white;
+        }
+        .btn-ios:hover { background: #0066CC; transform: translateY(-2px); }
+        
+        .btn-web {
+            background: #6366F1;
+            color: white;
+        }
+        .btn-web:hover { background: #5B5CF8; transform: translateY(-2px); }
+        
+        .qr-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #E5E7EB;
+        }
+        .qr-title {
+            font-size: 14px;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .qr-code {
+            width: 160px;
+            height: 160px;
+            background: #F3F4F6;
+            border-radius: 12px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #6B7280;
+        }
+        .version {
+            margin-top: 20px;
+            padding: 12px;
+            background: #F9FAFB;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #6B7280;
+        }
+        .warning {
+            margin-top: 20px;
+            padding: 12px;
+            background: #FEF3C7;
+            border: 1px solid #FCEBC8;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #92400E;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">RN</div>
+        <h1>RecrutadorNow</h1>
+        <p class="subtitle">Otimizador de currículos para ATS - Brazil</p>
+        
+        <a href="https://github.com/Regimarcilio/trilhajr-app/releases/download/v1.0.0/recrutadornow-android.apk" 
+           class="btn btn-android"
+           download="recrutadornow.apk">
+            📱 Instalar no Android
+        </a>
+        
+        <a href="https://expo.dev/@trilhajr/recrutadornow" 
+           class="btn btn-ios">
+            🍎 Instalar no iOS (Expo Go)
+        </a>
+        
+        <a href="https://recrutadornow.com" 
+           class="btn btn-web">
+            💻 Usar no Web
+        </a>
+        
+        <div class="qr-section">
+            <div class="qr-title">ou escaneie com Expo Go</div>
+            <div class="qr-code">
+                QR Code<br>Expo Go<br>https://expo.dev/<br>@trilhajr/recrutadornow
+            </div>
+        </div>
+        
+        <div class="version">
+            <strong>v1.0.0</strong> - Build de produção
+        </div>
+        
+        <div class="warning">
+            ⚠️ Primeiro uso: habilite "Instalar apps desconhecidos" nas opções do Android
+        </div>
+    </div>
+
+    <script>
+        // Track downloads (optional analytics)
+        console.log('RecrutadorNow download page loaded');
+    </script>
+</body>
+</html>
