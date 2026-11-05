@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Protótipo - Rezi App Brasil (PDF Sem Login)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1E3A8A',
+            secondary: '#F3F4F6',
+            accent: '#3B82F6',
+            success: '#10B981',
+            danger: '#EF4444'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .phone-frame {
+      background: #111827;
+      border-radius: 48px;
+      padding: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .screen {
+      background: #F9FAFB;
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+    }
+    .notch {
+      width: 180px;
+      height: 32px;
+      background: #111827;
+      border-radius: 18px;
+      margin: 12px auto 0;
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      height: 48px;
+      background: #F3F4F6;
+      border-bottom: 1px solid #E5E7EB;
+      font-size: 12px;
+      color: #6B7280;
+    }
+    .status-bar-right::before {
+      content: '';
+      width: 12px;
+      height: 16px;
+      background: #6B7280;
+      border-radius: 2px;
+      margin-right: 4px;
+    }
+    .icon {
+      width: 20px;
+      height: 20px;
+      fill: #6B7280;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-8">
+  <div class="phone-frame">
+    <div class="notch"></div>
+    <div class="screen">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="flex items-center gap-2">
+          <div class="status-bar-right"></div>
+          <svg class="icon"><path d="M17 10v-4a7 7 0 0 0-14 0v4h14z"/></svg>
+          <svg class="icon"><path d="M17 10v-4a7 7 0 0 0-14 0v4h14z"/></svg>
+        </div>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H6z"/></svg>
+      </div>
+
+      <!-- Tela 1: Boas-vindas -->
+      <div id="screen-1" class="p-6">
+        <div class="text-center mb-8">
+          <h1 class="text-2xl font-bold text-primary mb-2">Rezi Brasil</h1>
+          <p class="text-gray-600">Otimização de currículos para ATS</p>
+        </div>
+        
+        <div class="mb-6">
+          <div class="bg-blue-100 border border-blue-200 rounded-lg p-4 mb-4">
+            <h3 class="font-semibold text-blue-900 mb-2">Como funciona:</h3>
+            <ul class="text-sm text-blue-800 space-y-2">
+              <li class="flex items-center gap-2"><span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">1</span> Carregar seu currículo em PDF</li>
+              <li class="flex items-center gap-2"><span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">2</span> Pagar R$ 4,90 via Pix</li>
+              <li class="flex items-center gap-2"><span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">3</span> Receber PDF otimizado</li>
+            </ul>
+          </div>
+        </div>
+
+        <button onclick="showScreen('screen-2')" class="w-full py-3 bg-primary text-white rounded-xl font-semibold text-lg">
+          Carregar Currículo
+        </button>
+      </div>
+
+      <!-- Tela 2: Upload PDF -->
+      <div id="screen-2" class="hidden p-6">
+        <div class="mb-4">
+          <h1 class="text-xl font-bold text-gray-900">Carregar Currículo</h1>
+          <p class="text-gray-600 text-sm">Formatos: PDF (até 10MB)</p>
+        </div>
+
+        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 mb-6 text-center cursor-pointer hover:border-blue-400 transition"
+             onclick="simulateUpload()">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.90A4 4 0 0111.08 4m4 0a4 4 0 01.88 7.90A4 4 0 0113 20h-1a4 4 0 01-3.99-3.88z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11V7a4 4 0 00-8 0v4a4 4 0 008 0z"/>
+          </svg>
+          </svg>
+          <p class="text-gray-700 font-semibold">Clique para selecionar</p>
+          <p class="text-gray-500 text-sm">ou arraste seu PDF aqui</p>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+          <p class="text-sm text-gray-600"><strong>Arquivo selecionado:</strong> <span id="file-name">Nenhum arquivo</span></p>
+          <p class="text-xs text-gray-500 mt-1">Tamanho: 3,2MB / 10MB</p>
+        </div>
+
+        <div class="flex gap-3">
+          <button onclick="showScreen('screen-1')" class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700">
+            Voltar
+          </button>
+          <button onclick="showScreen('screen-3')" id="optimize-btn" class="flex-1 px-4 py-3 bg-primary text-white rounded-xl font-semibold disabled:opacity-50" disabled>
+            Otimizar Completo
+          </button>
+        </div>
+      </div>
+
+      <!-- Tela 3: Pagamento Pix -->
+      <div id="screen-3" class="hidden p-6 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 2L9 21m6-6v4m5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h1 class="text-xl font-bold text-gray-900">Valor: R$ 4,90</h1>
+          <p class="text-gray-600 text-sm">Para otimização completa com ATS</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 mb-6 text-center">
+          <h3 class="font-semibold text-gray-900 mb-3">Escaneie o QR Code</h3>
+          <div class="w-48 h-48 bg-gray-200 rounded-lg mx-auto mb-2 flex items-center justify-center border-2 border-dashed border-gray-300">
+            <span class="text-gray-500 text-xs">QR CODE Pix</span>
+          </div>
+          <p class="text-xs text-gray-500">Chave: 123456789000000000000000000000000000000000</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 mb-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-gray-600">Valor a pagar</span>
+            <span class="font-bold text-lg">R$ 4,90</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Expira em</span>
+            <span class="font-bold text-orange-600">09:28</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mb-4">
+          <button class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 text-sm">
+            Copiar Chave Pix
+          </button>
+          <button class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 text-sm">
+            Alterar Forma de Pagamento
+          </button>
+        </div>
+
+        <button onclick="showScreen('screen-4')" class="w-full py-3 bg-green-600 text-white rounded-xl font-semibold">
+          Confirmar Pagamento
+        </button>
+      </div>
+
+      <!-- Tela 4: Resultado -->
+      <div id="screen-4" class="hidden p-6">
+        <div class="text-center mb-4">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 20l4-4 4 4"/>
+            </svg>
+          </div>
+          <h1 class="text-xl font-bold text-gray-900">PDF Pronto! ✅</h1>
+          <p class="text-gray-600 text-sm">Pronto em 8 segundos</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 mb-6">
+          <h3 class="font-semibold text-gray-900 mb-3">Melhorias realizadas:</h3>
+          <ul class="text-sm text-gray-700 space-y-2">
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> +5 palavras-chave ATS</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Formato ABRATS compatível</li>
+            <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Experiência reorganizada</li>
+          </ul>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+          <p class="text-xs text-gray-500 text-center mb-2">Vista prévia do PDF:</p>
+          <div class="bg-white border border-gray-200 rounded-lg h-48 overflow-hidden">
+            <div class="p-3 border-b border-gray-100">
+              <div class="w-full h-4 bg-gray-300 rounded mb-2"></div>
+              <div class="w-3/4 h-4 bg-gray-300 rounded mb-2"></div>
+              <div class="w-1/2 h-4 bg-gray-300 rounded mb-2"></div>
+              <div class="w-full h-3 bg-gray-300 rounded"></div>
+            </div>
+            <div class="p-3">
+              <div class="space-y-1">
+                <div class="w-full h-2 bg-gray-300 rounded"></div>
+                <div class="w-5/6 h-2 bg-gray-300 rounded"></div>
+                <div class="w-4/6 h-2 bg-gray-300 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <button class="p-3 bg-blue-100 rounded-xl text-blue-700">
+            <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h4a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2v-9a2 2 0 012-2h4m-1 0L9 20h6L8 8z"/>
+            </svg>
+          </button>
+          <button class="p-3 bg-green-100 rounded-xl text-green-700">
+            <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11H7.4m4.6 4h.8a3 3 0 003-3V5a3 3 0 00-3-3h-4a3 3 0 00-3 3v4a3 3 0 003 3h.8"/>
+            </svg>
+          </button>
+          <button class="p-3 bg-purple-100 rounded-xl text-purple-700">
+            <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16h-1v-6h2v6zm0 2h-1v-2h2v2zm0 2h-1v-2h2v2z M5 20a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v13a2 2 0 01-2 2H5z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button class="flex-1 py-3 bg-primary text-white rounded-xl font-semibold text-sm">
+            📥 Baixar PDF
+          </button>
+          <button class="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold text-sm">
+            ↗ Compartilhar
+          </button>
+        </div>
+
+        <div class="mt-4 grid grid-cols-3 gap-2">
+          <button class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 text-xs">
+            WhatsApp
+          </button>
+          <button class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 text-xs">
+            E-mail
+          </button>
+          <button class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 text-xs">
+            Copy Link
+          </button>
+        </div>
+
+        <button class="w-full mt-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold">
+          Salvar para uso futuro
+        </button>
+      </div>
+
+      <!-- Navegação entre telas -->
+      <div class="fixed bottom-0 w-full bg-gray-100 py-3 px-4 border-t border-gray-200">
+        <div class="flex justify-center gap-6">
+          <button class="text-xs text-gray-500">screen-1</button>
+          <button class="text-xs text-gray-500">screen-2</button>
+          <button class="text-xs text-gray-500">screen-3</button>
+          <button class="text-xs text-gray-500">screen-4</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showScreen(screenId) {
+      // Esconder todas as telas
+      document.querySelectorAll('[id]').forEach(el => {
+        el.classList.add('hidden');
+      });
+      
+      // Mostrar tela selecionada
+      document.getElementById(screenId).classList.remove('hidden');
+      
+      // Atualizar navegação
+      document.querySelectorAll('div[id]').forEach((el, index) => {
+        const buttons = document.querySelectorAll('div[id] button');
+        if (buttons[index]) {
+          buttons[index].style.backgroundColor = 
+            screenId === `screen-${index + 1}` ? '#1E3A8A' : '#F3F4F6';
+          buttons[index].style.color = 
+            screenId === `screen-${index + 1}` ? 'white' : '#6B7280';
+        }
+      });
+    }
+
+    function simulateUpload() {
+      const fileName = 'currículo_joão_silva.pdf';
+      document.getElementById('file-name').textContent = fileName;
+      
+      const btn = document.getElementById('optimize-btn');
+      btn.disabled = false;
+      btn.textContent = 'Otimizar Completo';
+      btn.classList.remove('disabled:opacity-50');
+    }
+
+    // Navegação por teclado para teste
+    document.addEventListener('keydown', (e) => {
+      const current = document.querySelector('[id]:not(.hidden)');
+      if (!current) return;
+      
+      const screenNum = parseInt(current.id.split('-')[1]);
+      
+      if (e.key === 'ArrowRight' && screenNum < 4) {
+        showScreen(`screen-${screenNum + 1}`);
+      } else if (e.key === 'ArrowLeft' && screenNum > 1) {
+        showScreen(`screen-${screenNum - 1}`);
+      }
+    });
+
+    // Auto-focus na tela 1
+    showScreen('screen-1');
+  </script>
+</body>
+</html>
