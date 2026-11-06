@@ -1,0 +1,20 @@
+{
+  "extends": "expo/tsconfig",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "jsx": "react-native",
+    "resolveExtensions": [".tsx", ".ts", ".jsx", ".js", ".json"]
+  },
+  "include": [
+    "src/**/*",
+    "App.tsx",
+    "app.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.js"
+  ]
+}

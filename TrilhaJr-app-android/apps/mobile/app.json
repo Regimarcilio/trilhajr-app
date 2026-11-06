@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "ReziFlow",
+    "slug": "reziflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.reziflow.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#0F172A"
+      },
+      "package": "com.reziflow.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "reziApiUrl": "https://api.rezi.ai/v1",
+      "mqttBroker": "mqtts://mqtt.reziflow.com:8883",
+      "eas": {
+        "projectId": "de0dab8e-a1fd-4837-bf35-a1487ee65501"
+      }
+    },
+    "owner": "regimarcilio"
+  }
+}
