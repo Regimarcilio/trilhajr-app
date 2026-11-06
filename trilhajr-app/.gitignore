@@ -33,6 +33,25 @@ build/
 .env.*.local
 .env.*.local
 
+# Secrets (NUNCA commitar)
+.secrets/
+secrets/
+*.pem
+*.jks
+*.keystore
+*.key
+*.p12
+*.crt
+
+# Android secrets
+android/app/src/main/res/*
+secure*
+keystore*
+
+# iOS secrets
+ios/*
+fastlane/*
+
 # Logs
 logs
 *.log

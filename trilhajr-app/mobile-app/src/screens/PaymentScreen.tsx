@@ -7,10 +7,11 @@ import { api } from '@/services/api';
 import { Button } from '@/components/Button';
 import { COLORS, SPACING, FONT_SIZES, FONT_WEIGHTS, APP_CONFIG } from '@/constants';
 
-// PagSeguro Web Checkout - mais simples de integrar
-// Usa iframe ou redirect em web, ou SDK nativo
-const PAGSEGURO_EMAIL = 'contato@trilhajr.app';
-const PAGSEGURO_TOKEN = 'seu-token-aqui';
+// PagSeguro Web Checkout - credenciais via environment variables
+// Importante: Configurar via .env (Expo Application Config)
+const PAGSEGURO_EMAIL = process.env.EXPO_PUBLIC_PAGSEGURO_EMAIL || '';
+const PAGSEGURO_TOKEN = process.env.EXPO_PUBLIC_PAGSEGURO_TOKEN || '';
+const PAGSEGURO_MODE = process.env.EXPO_PUBLIC_PAGSEGURO_MODE || 'sandbox';
 
 export const PaymentScreen: React.FC = () => {
   const { pdfFile, paymentStatus, setPaymentStatus, setCurrentScreen } = useAppStore();

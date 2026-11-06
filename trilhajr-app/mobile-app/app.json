@@ -31,7 +31,25 @@
     "extra": {
       "eas": {
         "projectId": "recrutadornow-project-id"
+      },
+      "env": {
+        "PAGSEGURO_EMAIL": "",
+        "PAGSEGURO_TOKEN": "",
+        "PAGSEGURO_MODE": "sandbox",
+        "JWT_SECRET": ""
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildProperties": {
+              "keystorePropsFile": ".secrets/keystore.properties"
+            }
+          }
+        }
+      ]
+    ]
   }
 }

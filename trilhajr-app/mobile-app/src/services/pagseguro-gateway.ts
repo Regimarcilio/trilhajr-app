@@ -5,6 +5,9 @@
  * - Usuário paga no popup do PagSeguro
  * - Retorna webhook para confirmação
  * - Não precisa de conta merchant complexa
+ * 
+ * ⚠️ Segurança: Todas as credenciais devem estar em .env
+ * NÃO commitar valores reais no código
  */
 
 interface PagSeguroConfig {
@@ -34,6 +37,14 @@ class PagSeguroGateway {
   private baseUrl: string;
 
   constructor(config: PagSeguroConfig) {
+    // Validar credenciais no ambiente
+    if (!config.email || config.email.includes('placeholder') || config.email.includes('seu-')) {
+      console.warn('⚠️ PagSeguro email não configurado - usando modo mock');
+    }
+    if (!config.token || config.token.includes('token-aqui')) {
+      console.warn('⚠️ PagSeguro token não configurado - usando modo mock');
+    }
+    
     this.config = config;
     this.baseUrl = config.mode === 'sandbox'
       ? 'https://sandbox.brpagseguro.com.br'
@@ -46,6 +57,19 @@ class PagSeguroGateway {
    */
   async createPayment(data: PaymentData): Promise<PagSeguroResponse> {
     try {
+      // Validação de credenciais
+      if (!this.config.email || !this.config.token) {
+        throw new Error('Credenciais PagSeguro não configuradas');
+      }
+
+      // Em produção, chamar API real do PagSeguro
+      // const response = await fetch(`${this.baseUrl}/api/v2/checkout/order`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      //   body: this.buildCheckoutPayload(data)
+      // });
+      
+      // Mock temporário - REMOVER após integração real
       const paymentId = 'TR-' + Date.now() + '-' + Math.random().toString(36).substr(2, 8);
       
       const response: PagSeguroResponse = {
@@ -68,6 +92,13 @@ class PagSeguroGateway {
    * Formato padrão BR-Pix
    */
   generatePixCode(amount: number, reference: string): string {
+    // Validar ambiente
+    if (this.config.mode === 'sandbox') {
+      // Retornar código mock apenas em sandbox
+      return '00020126500016.BR.Pix.Gerado000000000000000000000000000000000000000000000052040000530398654034905501BR5802BR5925TRILHAJR CURRICULOS6009SAO PAULO610200006303AAAA';
+    }
+    
+    // Em produção, usar API real doPagSeguro ou gerar Pix dinamicamente
     const timestamp = new Date().toISOString().replace(/[-T:]/g, '').slice(0, 14);
     const merchantName = 'TRILHAJR';
     const formattedAmount = amount.toFixed(2).replace('.', '');
@@ -92,25 +123,48 @@ class PagSeguroGateway {
   }
 
   private generateSignature(amount: number, reference: string): string {
-    // Mock - em produção usar HMAC SHA256
+    // Mock - em produção usar HMAC SHA256 com merchant key
+    // Implementar após ter credenciais reais
+    if (this.config.token.includes('token')) {
+      return '123456';
+    }
+    
+    // TODO: Implementar assinatura real quando credenciais reais estiverem disponíveis
+    // const crypto = require('crypto');
+    // return crypto.createHmac('sha256', this.config.token)
+    //   .update(`${amount}${reference}`)
+    //   .digest('base64');
     return '123456';
   }
 
   /**
-   * Verifica status do pagamento
+   * Verifica status do pagamento via webhook ou API
    */
   async getPaymentStatus(code: string): Promise<{ status: 'pending' | 'confirmed' | 'cancelled' }> {
-    // Mock - em produção chamar API PagSeguro
-    return { status: 'confirmed' };
+    // Em produção, chamar API PagSeguro
+    // Mock apenas em sandbox ou quando credenciais não configuradas
+    if (!this.config.email || this.config.mode === 'sandbox') {
+      return { status: 'confirmed' };
+    }
+    
+    try {
+      // const response = await fetch(`${this.baseUrl}/api/v2/transactions/${code}`);
+      // return response.json();
+    } catch (error) {
+      return { status: 'pending' };
+    }
+    
+    return { status: 'pending' };
   }
 }
 
 // Instância singleton para reaproveitamento
+// ⚠️ Usar variáveis EXPO_PUBLIC para Expo
 const pagSeguroGateway = new PagSeguroGateway({
-  email: process.env.PAGSEGURO_EMAIL || 'contato@trilhajr.app',
-  token: process.env.PAGSEGURO_TOKEN || 'sandbox-token-aqui',
+  email: process.env.EXPO_PUBLIC_PAGSEGURO_EMAIL || '',
+  token: process.env.EXPO_PUBLIC_PAGSEGURO_TOKEN || '',
   currency: 'BRL',
-  mode: (process.env.PAGSEGURO_MODE as 'sandbox' | 'production') || 'sandbox',
+  mode: (process.env.EXPO_PUBLIC_PAGSEGURO_MODE as 'sandbox' | 'production') || 'sandbox',
 });
 
 export { pagSeguroGateway, PagSeguroGateway, PagSeguroConfig, PaymentData, PagSeguroResponse };
