@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MailChat — Protótipos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#00A884',
+            branddark: '#008069',
+            ink: '#111B21'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+  <div class="max-w-5xl mx-auto px-6 py-12">
+
+    <header class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-12">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-brand flex items-center justify-center shadow-lg shadow-brand/30">
+          <svg viewBox="0 0 24 24" class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 6H2v12h20V6z"/><path d="M2 6l10 7L22 6"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold tracking-tight">MailChat</h1>
+          <p class="text-gray-400 text-sm">Protótipos navegáveis — e-mail com experiência de conversa</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-brand/15 text-brand border border-brand/30">PROTO-NAVEGÁVEL</span>
+        <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-300 border border-gray-700">1 tela</span>
+      </div>
+    </header>
+
+    <main class="grid gap-6 md:grid-cols-2">
+
+      <a href="email-whatsapp.html" class="group block rounded-2xl border border-gray-800 bg-gray-900/60 p-6 hover:border-brand/60 hover:bg-gray-900 transition">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 rounded-xl bg-brand/15 text-brand flex items-center justify-center">
+            <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          </div>
+          <span class="text-xs font-semibold text-gray-500 group-hover:text-brand transition">Tela 01</span>
+        </div>
+        <h2 class="text-xl font-bold mb-2">E-mail em estilo WhatsApp</h2>
+        <p class="text-sm text-gray-400 leading-relaxed mb-5">
+          Lista de remetentes à esquerda, conversa com bolhas, artefatos e ticks à direita, seletor de paletas,
+          configurações de e-mail e agenda lateral com calendário e post-its que anexam e-mails a compromissos.
+        </p>
+        <div class="flex flex-wrap gap-2 mb-6">
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-800 text-gray-300">lista de contatos</span>
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-800 text-gray-300">bolhas + artefatos</span>
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-800 text-gray-300">5 paletas</span>
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-800 text-gray-300">agenda + post-its</span>
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-gray-800 text-gray-300">configurações</span>
+        </div>
+        <span class="inline-flex items-center gap-2 text-sm font-semibold text-brand">
+          Abrir protótipo
+          <svg viewBox="0 0 24 24" class="w-4 h-4 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <div class="rounded-2xl border border-gray-800 bg-gray-900/60 p-6">
+        <h2 class="text-lg font-bold mb-4">Como abrir</h2>
+        <ol class="text-sm text-gray-400 space-y-3 leading-relaxed list-decimal list-inside">
+          <li>Duplo clique em <code class="px-1.5 py-0.5 rounded bg-gray-800 text-brand">prototipos/email-whatsapp.html</code>; ou</li>
+          <li>Suba um servidor local:
+            <code class="block mt-2 px-3 py-2 rounded-lg bg-gray-950 text-gray-300 text-xs">cd email-whatsapp &amp;&amp; python3 -m http.server 8080</code>
+          </li>
+          <li>Acesse <code class="px-1.5 py-0.5 rounded bg-gray-800 text-brand">http://localhost:8080/prototipos/</code></li>
+        </ol>
+        <div class="mt-6 pt-5 border-t border-gray-800">
+          <h3 class="text-sm font-semibold mb-2">Ciclo proto-first</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">PROPOSTA → NAVEGÁVEL → VALIDADA → APROVADA → IMPLEMENTADA. Brief e roteiro em <code class="text-gray-400">docs/proto/</code>; registros em <code class="text-gray-400">docs/dev-log.md</code>.</p>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="mt-12 pt-6 border-t border-gray-800 text-xs text-gray-600 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <span>MailChat · protótipo de validação · single-file, offline-first</span>
+      <span>Stack: HTML + CSS/JS inline · hub com Tailwind CDN</span>
+    </footer>
+
+  </div>
+</body>
+</html>
