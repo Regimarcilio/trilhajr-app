@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "versao": "0.1.0",
+    "fonte": "prototipos/email-whatsapp.html",
+    "gerado_em": "2026-11-14",
+    "status": "APROVADO"
+  },
+  "contatos": [
+    {
+      "id": 1,
+      "nome": "Ana Souza",
+      "email": "ana.souza@empresa.com",
+      "assunto": "Proposta Comercial — Projeto Aurora",
+      "nao_lidos": 2,
+      "mensagens": [
+        {
+          "de": "remetente",
+          "remetente": "Ana Souza",
+          "texto": "Bom dia! Conforme conversamos, segue a proposta comercial para o Projeto Aurora com o escopo completo.",
+          "em": "2026-11-14T09:12:00",
+          "artefato": {
+            "tipo": "pdf",
+            "nome": "Proposta_Comercial_Aurora_v2.pdf",
+            "tamanho": "2.4 MB"
+          }
+        },
+        {
+          "de": "remetente",
+          "remetente": "Ana Souza",
+          "texto": "Perfeito. Incluí também a planilha de investimentos por fase.",
+          "em": "2026-11-14T09:42:00"
+        },
+        {
+          "de": "remetente",
+          "remetente": "Ana Souza",
+          "texto": "Qualquer dúvida, me chama.",
+          "em": "2026-11-14T09:43:00"
+        }
+      ]
+    }
+  ]
+}
