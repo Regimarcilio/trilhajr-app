@@ -1,0 +1,91 @@
+name: MailChat CI
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'email-whatsapp/**'
+      - '.github/workflows/mailchat-ci.yml'
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'email-whatsapp/**'
+      - '.github/workflows/mailchat-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mailchat-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: email-whatsapp/frontend
+
+jobs:
+  quality:
+    name: Typecheck, lint, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22 + cache npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: email-whatsapp/frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Sequencial de propósito: sob carga, o timeout de 5s dos testes pode flakar.
+      - name: Testes unitários
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: E2E (Playwright/Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22 + cache npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: email-whatsapp/frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      # O playwright.config.ts sobe o app na porta 3100 (build + start).
+      - name: Rodar E2E
+        run: npx playwright test
+
+      - name: Publicar report do Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: email-whatsapp/frontend/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
