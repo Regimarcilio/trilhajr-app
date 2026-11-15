@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -46,7 +46,6 @@ export function PostItModal({ open, onOpenChange, presetEmailId }: PostItModalPr
     handleSubmit,
     reset,
     setValue,
-    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -58,7 +57,7 @@ export function PostItModal({ open, onOpenChange, presetEmailId }: PostItModalPr
     },
   });
 
-  const values = watch();
+  const values = useWatch({ control });
 
   useEffect(() => {
     if (open) {
