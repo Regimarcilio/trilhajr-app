@@ -136,3 +136,42 @@
   - Registro da lição em `docs/conhecimento/` ficou pendente por restrição de escopo do commit; evidência registrada nesta entrada.
   - `mailchat.service` e `TrilhaJr-app-android/` não foram tocados.
 
+
+## 2026-11-15 — Infra de deploy multiusuário (TLS, secrets, backup, observabilidade) — @opsmaster (issue #22)
+
+- **Objetivo:** preparar os artefatos de produção do MailChat (Docker/Compose, proxy TLS, segredos, backup criptografado, systemd hardening e observabilidade) **sem executar deploy** e sem tocar em `mailchat.service` (3100) nem no `TrilhaJr-app-android/`.
+- **Branch/PR:** `DEV` (a partir de `origin/develop` `17c15ed`) → `develop`; **sem merge** (aguarda decisões P1..P14 do runbook).
+- **Decisões:**
+  - **Nginx** como borda (já instalado 1.24; validação offline com `nginx -t`) em vez de Caddy. TLS 1.2/1.3, HSTS, redirect 301, `/`→3100, `/api/`→8787, `/health`→8787, `/metrics` público 404.
+  - **Compose** como caminho principal (app + Postgres em rede `data` interna); systemd nativo fica como alternativa para Postgres gerenciado/TCP. Nenhuma porta de Postgres/Redis publicada. O app usa `egress` com prioridade maior para o default gateway (Gmail API), mantendo o banco sem rota externa.
+  - **Postgres 18**: `mailchat_owner` (DDL/migrations) e `mailchat_app` DML-only, sem superuser/createdb/createrole/bypassrls; init script só roda em volume vazio.
+  - **Migrations** via perfil Compose `migrate` (build target `build`, `env/migrate.env`, `npm run db:migrate`). Dockerfile de build passou a copiar `drizzle/` e `drizzle.config.ts`; `.dockerignore` não exclui mais `drizzle`.
+  - **Backup** `pg_dump -Fc` → `pg_restore --list` → GPG AES256 com chave pública, retenção 14 dias, checksum `.sha256`, `.meta` e métricas textfile. Chave privada fica offline; restore documentado, ainda **não executado**.
+  - O unit de backup roda com `ProtectHome=true`; o Compose e o `.env` de interpolação ficam em `/opt/mailchat/infra` e o script recebe `BACKUP_COMPOSE_ENV_FILE` (0600), sem senha no `backup.env`.
+  - **Métricas de backup em dois arquivos**: sucesso (`mailchat-backup.prom`) preservado em falha e status (`mailchat-backup-status.prom`) sempre atualizado, para `MailchatBackupStale` continuar calculável depois de um erro. Métricas ficam 0644 (sem segredo) para o node_exporter; `.gpg` continua 0600.
+  - **Restore isolado** usa container/volume dedicados (`mailchat-restore-db`/`mailchat-restore-pgdata`) e porta 55432; **nunca** `compose.prod.yml`, cujo volume `mailchat-pgdata` tem nome fixo e seria reutilizado.
+  - **systemd**: backend non-root UID 10001, `NoNewPrivileges`, `ProtectSystem=strict`, `PrivateTmp`, `EnvironmentFile` 0600; backup com `StateDirectory`/`CacheDirectory` e timer diário. Units ficam como `.example`, não instalados.
+  - **Observabilidade**: journald 90 d/2 GB, driver `journald`, alertas para 5xx, 429, token/sync, disco, backup e TLS; Prometheus/Grafana ainda não instalados.
+  - Redis desligado por padrão (profile `redis`); só se houver múltiplas instâncias/fila persistente.
+- **Arquivos principais:**
+  - `email-whatsapp/infra/{README.md,runbook.md,checklist-deploy.md,.env.example,.gitignore}`
+  - `email-whatsapp/infra/{compose.prod.yml,backend.Dockerfile,backend.Dockerfile.dockerignore}`
+  - `email-whatsapp/infra/env/{backend.env.example,migrate.env.example}`
+  - `email-whatsapp/infra/postgres/init/10-app-role.sh`
+  - `email-whatsapp/infra/proxy/nginx.conf.example`
+  - `email-whatsapp/infra/systemd/mailchat-backend.service.example` + drop-in + backup service/timer
+  - `email-whatsapp/infra/backup/{backup.sh,backup.env.example,restore.md}`
+  - `email-whatsapp/infra/observability/{alerts.yml,metrics.md,prometheus.yml.example}`
+- **Gates (locais):**
+  - `docker compose config` com dummies **exit 0**; com `--profile migrate --profile redis` **exit 0**; sem `.env` **exit 1** com falha clara de `POSTGRES_PASSWORD`.
+  - YAML de `compose.prod.yml`, `alerts.yml`, `prometheus.yml.example` válido.
+  - `nginx -t` com config completa, cert self-signed e portas temporárias **18080/18443** → **exit 0** (warning esperado de `user` por não ser root). Sem bind em 80/443/3100/8787.
+  - `systemd-analyze verify` backend **exit 0**; `systemd-analyze security --offline=yes` → **1.5 OK**; timer **exit 0**; backup **exit 1 esperado** (script ainda não instalado em `/usr/local/sbin`).
+  - `bash -n backup/backup.sh` e `sh -n postgres/init/10-app-role.sh` **exit 0**.
+  - `backup.sh --check` **exit 0**; sem `BACKUP_GPG_RECIPIENT` **exit 2** (falha intencional).
+  - Fluxo completo do backup simulado com `docker` stub + chave GPG efêmera: **exit 0**, `.gpg`/`.sha256`/`.meta` e métricas gerados; checksum **OK**; falha simulada **exit 9** e status preservado.
+  - `git diff --check` **exit 0**; grep de chaves/tokens em `infra/` **nenhum**.
+  - **Não executados:** build da imagem, containers, migrations reais, restore, `nginx -s reload`, instalação de units, `shellcheck`, `gitleaks`, `promtool` (binários ausentes no host).
+- **Restrições cumpridas:** nenhum deploy/container; nenhum unit instalado; `mailchat.service` (3100) intocado; nenhum segredo real; nenhuma chamada DNS/TLS/ACME; nenhuma alteração fora de `email-whatsapp/infra/**` e deste dev-log; nenhum merge.
+- **Pendências/riscos:** decisões P1..P14 do `runbook.md` (domínio/DNS, certbot/provedor TLS, destino offsite + custódia GPG, canal de alerta/on-call, custo, caminho de deploy, janela/go-no-go, geração/guarda de segredos, pacotes, Google OAuth/CASA, RPO/RTO, DPO/LGPD, Redis, firewall 3100/8787). Pinar `node:22-alpine` por digest no deploy. Backup usa credencial owner (`pg_dump` completo); avaliar role `pg_read_all_data` no futuro. Restore real e go-live continuam bloqueados até o gate KALIMASTER.
+- **Lições:** métrica de sucesso e de status em arquivos separados evita perder o `last_success` em falha e mantém o alerta de staleness útil; `nginx.conf.example` é um `nginx.conf` completo (não um site em `sites-enabled`), então o teste precisa substituir `pid`/logs/portas/certificados.

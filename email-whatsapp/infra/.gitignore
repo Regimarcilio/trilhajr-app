@@ -1,0 +1,28 @@
+# Segredos e configuração de runtime — nunca versionar
+.env
+.env.*
+!.env.example
+env/*.env
+!env/backend.env.example
+!env/migrate.env.example
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Backups, dumps e artefatos locais
+backups/
+*.dump
+*.dump.gpg
+*.dump.gpg.sha256
+*.dump.gpg.meta
+*.sql
+!postgres/init/*.sql
+
+# Chaves GPG / keyrings locais
+gnupg/
+*.kbx
+*.gpg~
+trustdb.gpg

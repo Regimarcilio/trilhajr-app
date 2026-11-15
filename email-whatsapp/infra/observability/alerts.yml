@@ -1,0 +1,204 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MailChat — regras de alerta (Prometheus)
+#
+# Instalação: /etc/prometheus/rules/mailchat-alerts.yml + reload do Prometheus.
+# Runbook: infra/runbook.md e infra/observability/metrics.md.
+#
+# Observação importante (F0):
+#   - `mailchat_http_requests_total{status}` e `mailchat_http_request_duration_ms_avg`
+#     já existem no backend F0.
+#   - métricas `mailchat_gmail_*`, `mailchat_sync_*` só passam a existir em
+#     F1/F2 (instrumentação do backend). As regras são válidas e simplesmente
+#     não disparam enquanto a série não existir.
+#   - backup e disco dependem de node_exporter + textfile collector.
+# ─────────────────────────────────────────────────────────────────────────────
+groups:
+  - name: mailchat.availability
+    interval: 30s
+    rules:
+      - alert: MailchatTargetDown
+        expr: up{job="mailchat-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: mailchat
+          component: backend
+        annotations:
+          summary: "Backend MailChat indisponível"
+          description: "O scrape de {{ $labels.instance }} falha há 2 min. Verifique o unit/container e o /health."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#91-backend-fora-do-ar"
+
+      - alert: MailchatMetricsMissing
+        expr: absent(mailchat_process_uptime_seconds{job="mailchat-backend"})
+        for: 10m
+        labels:
+          severity: warning
+          service: mailchat
+          component: backend
+        annotations:
+          summary: "Métricas do backend ausentes"
+          description: "O /metrics não expõe mailchat_process_uptime_seconds há 10 min; verifique instrumentação/scrape."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/observability/metrics.md"
+
+  - name: mailchat.http
+    interval: 30s
+    rules:
+      - alert: MailchatHigh5xxRate
+        expr: |
+          (
+            sum(rate(mailchat_http_requests_total{job="mailchat-backend",status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(mailchat_http_requests_total{job="mailchat-backend"}[5m])), 1e-9)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: mailchat
+          component: api
+        annotations:
+          summary: "Taxa de 5xx acima de 5%"
+          description: "{{ $value | humanizePercentage }} das requisições são 5xx há 5 min."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#92-erros-5xx"
+
+      - alert: Mailchat429Spike
+        expr: sum(rate(mailchat_http_requests_total{job="mailchat-backend",status="429"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: mailchat
+          component: rate-limit
+        annotations:
+          summary: "Pico de 429 no MailChat"
+          description: "{{ $value | humanize }} req/s recebendo 429 há 5 min. Verifique abuso, limites ou retry agressivo."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#93-429-e-quota-gmail"
+
+  - name: mailchat.gmail
+    interval: 30s
+    rules:
+      - alert: MailchatGmailTokenFailures
+        expr: increase(mailchat_gmail_token_failures_total{job="mailchat-backend"}[15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: mailchat
+          component: oauth
+        annotations:
+          summary: "Falha de token/refresh no Gmail"
+          description: "Houve falha de token/refresh nos últimos 15 min. Verifique `invalid_grant`, revogação e chaves."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#94-falha-de-token-ou-sync"
+
+      - alert: MailchatSyncFailures
+        expr: increase(mailchat_sync_failures_total{job="mailchat-backend"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: mailchat
+          component: sync
+        annotations:
+          summary: "Falhas de sincronização"
+          description: "Sincronizações falharam nos últimos 15 min. Verifique Gmail API, quota, historyId e logs."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#94-falha-de-token-ou-sync"
+
+      - alert: MailchatGmailQuotaPressure
+        expr: increase(mailchat_gmail_api_responses_total{job="mailchat-backend",status="429"}[15m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: mailchat
+          component: gmail
+        annotations:
+          summary: "Pressão de quota da Gmail API"
+          description: "Mais de 10 respostas 429 do Gmail em 15 min. Verifique quota do projeto e backoff."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#93-429-e-quota-gmail"
+
+  - name: mailchat.storage
+    interval: 60s
+    rules:
+      - alert: MailchatDiskLow
+        expr: |
+          (
+            node_filesystem_avail_bytes{job="node",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+            /
+            node_filesystem_size_bytes{job="node",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+          ) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+          service: mailchat
+          component: host
+        annotations:
+          summary: "Disco abaixo de 15%"
+          description: "Restam {{ $value | humanizePercentage }} em /. Backups e Postgres podem falhar."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#95-disco-e-backup"
+
+      - alert: MailchatDiskCritical
+        expr: |
+          (
+            node_filesystem_avail_bytes{job="node",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+            /
+            node_filesystem_size_bytes{job="node",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+          ) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: mailchat
+          component: host
+        annotations:
+          summary: "Disco abaixo de 5%"
+          description: "Risco iminente de indisponibilidade/backup falho. Libere espaço agora."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#95-disco-e-backup"
+
+  - name: mailchat.backup
+    interval: 60s
+    rules:
+      - alert: MailchatBackupStale
+        expr: time() - mailchat_backup_last_success_timestamp_seconds > 36 * 3600
+        for: 10m
+        labels:
+          severity: critical
+          service: mailchat
+          component: backup
+        annotations:
+          summary: "Backup atrasado (> 36 h)"
+          description: "Último backup bem-sucedido há mais de 36 h. Verifique timer, GPG, disco e logs do mailchat-backup."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#95-disco-e-backup"
+
+      - alert: MailchatBackupFailed
+        expr: mailchat_backup_last_exit_code != 0
+        for: 5m
+        labels:
+          severity: critical
+          service: mailchat
+          component: backup
+        annotations:
+          summary: "Último backup falhou"
+          description: "O script de backup retornou código diferente de zero (ver métrica mailchat_backup_last_exit_code). Consulte `journalctl -u mailchat-backup.service`."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#95-disco-e-backup"
+
+      - alert: MailchatBackupMetricsMissing
+        expr: absent(mailchat_backup_last_success_timestamp_seconds)
+        for: 1h
+        labels:
+          severity: warning
+          service: mailchat
+          component: backup
+        annotations:
+          summary: "Métrica de backup ausente"
+          description: "O textfile collector não expõe a métrica de backup. Verifique node_exporter/BACKUP_TEXTFILE_DIR."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/observability/metrics.md"
+
+  # Opcional: exige blackbox_exporter (module https_2xx).
+  - name: mailchat.tls
+    interval: 60s
+    rules:
+      - alert: MailchatTlsCertExpiring
+        expr: probe_ssl_earliest_cert_expiry{job="blackbox-mailchat"} - time() < 14 * 86400
+        for: 1h
+        labels:
+          severity: warning
+          service: mailchat
+          component: tls
+        annotations:
+          summary: "Certificado TLS expira em < 14 dias"
+          description: "Renovação automática pode ter falhado. Verifique certbot/timer e o proxy."
+          runbook_url: "https://github.com/Regimarcilio/trilhajr-app/blob/develop/email-whatsapp/infra/runbook.md#8-tls-e-proxy"
