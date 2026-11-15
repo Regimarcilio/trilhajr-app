@@ -35,3 +35,17 @@
 - **Arquivos:** `email-whatsapp/frontend/**` (app, components, lib, hooks, store, tests, e2e).
 - **Testes:** 13/13 Vitest verdes; typecheck limpo; `next build` OK; validação Playwright (DOM) — envio, tema, post-it, modais, 0 erros de console; `npm audit` 0 vulnerabilidades (zod 4.6.7, vitest 5.1.0).
 - **Pendências:** integração com API real (BACKDEV); persistência backend; notificações.
+
+## 2026-11-15 — Conclusão do escopo do protótipo — @issuemaster
+
+- **Objetivo:** encerrar as pendências do escopo formalizado no brief, sem ampliar para backend.
+- **Merge:** PR #9 (`DEV` → `develop`) — frontend MailChat integrado.
+- **Gates corrigidos:**
+  - #5 lint: ESLint 9 + `eslint-config-next` 16 (flat config); script `eslint .`; correções reais em `input.tsx` e `PostItModal.tsx`.
+  - #6 E2E: locators escopados ao painel central; `webServer` na porta 3100; `test-results/` e `playwright-report/` ignorados.
+- **Qualidade:** 13/13 Vitest, 3/3 Playwright, lint/typecheck/build verdes, `npm audit` 0.
+- **CI (#7):** `.github/workflows/mailchat-ci.yml` escopado a `email-whatsapp/**` (quality + e2e).
+- **Documentação (#8):** `README.md`, `docs/SRS.md`, `.env.example`.
+- **Escopo:** #4 (backend/persistência) encerrado como **fora do escopo** do protótipo (brief §4).
+- **Lições registradas:** Next 16 removeu `next lint`; Playwright exige locators escopados quando o texto aparece em dois painéis; porta 3000 pode estar ocupada por outro app, então o E2E usa 3100.
+- **Resultado:** escopo do protótipo **CONCLUÍDO**. Sem pendências abertas neste projeto.
