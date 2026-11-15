@@ -1,0 +1,19 @@
+# Dependências e build
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Ambiente (segredos) — mantenha apenas o exemplo
+.env
+.env.*
+!.env.example
+
+# Logs e artefatos locais
+*.log
+.vitest/
+test-results/
+
+# Sistema
+.DS_Store
+Thumbs.db

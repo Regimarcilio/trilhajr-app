@@ -1,0 +1,42 @@
+{
+  "name": "@mailchat/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MailChat — fundação do backend (F0): Hono, env Zod, Drizzle/Postgres, healthcheck e observabilidade base.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run test/integration/db.integration.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:rollback": "node scripts/rollback.mjs",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.8",
+    "drizzle-orm": "0.45.4",
+    "hono": "4.13.18",
+    "postgres": "4.1.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "drizzle-kit": "0.31.11",
+    "eslint": "10.15.0",
+    "globals": "17.14.0",
+    "tsup": "9.0.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "4.1.12"
+  }
+}
