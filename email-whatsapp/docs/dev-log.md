@@ -49,3 +49,50 @@
 - **Escopo:** #4 (backend/persistência) encerrado como **fora do escopo** do protótipo (brief §4).
 - **Lições registradas:** Next 16 removeu `next lint`; Playwright exige locators escopados quando o texto aparece em dois painéis; porta 3000 pode estar ocupada por outro app, então o E2E usa 3100.
 - **Resultado:** escopo do protótipo **CONCLUÍDO**. Sem pendências abertas neste projeto.
+
+## 2026-11-15 — Planejamento da integração Gmail OAuth2 — @planmaster (issue #12)
+
+- **Objetivo:** especificar a evolução do MailChat de mock para Gmail real (OAuth2, leitura + envio, multiusuário) sem implementar código.
+- **Branch:** `ISSUE` (a partir de `develop`); PR aberto, **sem merge** (aguarda aprovação do usuário).
+- **Task:** execução direta pelo MASTER — despacho via subagente indisponível no ambiente (`subagent depth limit reached`); papéis de PLANMASTER exercidos na mesma sessão.
+- **Decisões:**
+  - OAuth2 Authorization Code + PKCE S256, `state` de uso único, escopos `openid email profile gmail.readonly gmail.send` (ADR-001).
+  - Gmail API v1 como provedor primário, com interface `MailProvider` para permitir IMAP/SMTP XOAUTH2 no futuro (ADR-002).
+  - Multi-tenancy por coluna `user_id` + repositórios escopados + RLS opcional; refresh token com AES-256-GCM e `key_version` (ADR-003).
+  - Sync: janela de 90 dias, `format=metadata` na listagem, corpo sob demanda, `historyId` incremental com full resync em 404.
+  - Envio: MIME RFC 2822, `In-Reply-To`/`References`/`threadId`, `Idempotency-Key`, limite de 25 MB.
+- **Arquivos:**
+  - `email-whatsapp/docs/gmail/SRS-gmail-oauth2.md`
+  - `email-whatsapp/docs/gmail/arquitetura.md`
+  - `email-whatsapp/docs/gmail/adr/ADR-001-oauth2-vs-senha-de-app.md`
+  - `email-whatsapp/docs/gmail/adr/ADR-002-gmail-api-vs-imap-smtp-xoauth2.md`
+  - `email-whatsapp/docs/gmail/adr/ADR-003-multitenancy-token-storage.md`
+  - `email-whatsapp/docs/gmail/backlog-fases.md`
+  - `email-whatsapp/docs/gmail/criterios-aceite.md`
+  - `email-whatsapp/docs/gmail/plano-verificacao-google-lgpd.md`
+  - `email-whatsapp/docs/gmail/README.md`
+  - `email-whatsapp/.env.example` (placeholders OAuth2/segredos; nenhum segredo real)
+- **Issues filhas:** #14–#24 (backend, frontend, infra, QA, sec, docs), relacionadas a #12/#13.
+- **Testes:** não aplicável (documentação). Estrutura de markdown e blocos Mermaid revisados; suíte E2E não executada por não ser necessária.
+- **Pendências:** aprovação do usuário; criação do projeto Google Cloud; verificação/CASA; implementação conforme fases F0–F5.
+
+## 2026-11-15 — Threat model e hardening OAuth2 multiusuário — @kalimaster (issue #13)
+
+- **Objetivo:** produzir threat model STRIDE e requisitos de segurança antes da implementação, evitando retrabalho e vazamento de credenciais/dados.
+- **Branch:** `SEG` (a partir de `develop`); PR aberto, **sem merge** (aguarda aprovação do usuário).
+- **Task:** execução direta pelo MASTER — despacho via subagente indisponível no ambiente (`subagent depth limit reached`); papel de KALIMASTER exercido na mesma sessão.
+- **Decisões:**
+  - 28 ameaças mapeadas (T-01..T-28) em OAuth2, sessão, sync, leitura, envio, anexos e operação; top 10 com IDOR, vazamento de token e supply chain no topo.
+  - 48 requisitos verificáveis (SR-01..SR-48) com nível MUST/SHOULD, evidência e fase.
+  - 37 casos de teste de segurança (ST-01..ST-37), com matriz de cobertura.
+  - Gate de go-live binário e checklist de deploy; proibição de reiniciar `mailchat.service` nesta fase.
+  - Laudo inicial: 7 achados confirmados (nenhum crítico explorável no mock) e 7 riscos de projeto.
+- **Arquivos:**
+  - `email-whatsapp/docs/security/threat-model-stride.md`
+  - `email-whatsapp/docs/security/requisitos-hardening.md`
+  - `email-whatsapp/docs/security/plano-testes-seguranca.md`
+  - `email-whatsapp/docs/security/checklist-deploy.md`
+  - `email-whatsapp/docs/security/laudo-inicial.md`
+  - `email-whatsapp/docs/security/README.md`
+- **Testes:** `gitleaks` e `osv-scanner` não executados (indisponíveis no ambiente) — registrado no laudo; DAST não aplicável ao mock.
+- **Resultado:** veredito **APTO COM RESSALVAS PARA PLANEJAMENTO**; implementação com dados reais bloqueada até SR-21..SR-24, SR-07..SR-13, SR-26, SR-39/SR-40.
