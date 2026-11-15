@@ -96,3 +96,43 @@
   - `email-whatsapp/docs/security/README.md`
 - **Testes:** `gitleaks` e `osv-scanner` não executados (indisponíveis no ambiente) — registrado no laudo; DAST não aplicável ao mock.
 - **Resultado:** veredito **APTO COM RESSALVAS PARA PLANEJAMENTO**; implementação com dados reais bloqueada até SR-21..SR-24, SR-07..SR-13, SR-26, SR-39/SR-40.
+
+## 2026-11-15 — Fundação do backend MailChat (F0) — @backdev (issue #14)
+
+- **Objetivo:** criar `email-whatsapp/backend/` de pé (Node 22 + TS strict + Hono), `/health`, envelope de erro, env Zod, Drizzle/Postgres e CI — **sem** OAuth2, sync, envio ou alterações no frontend/TrilhaJr.
+- **Branch/PR:** `DEV` (a partir de `origin/develop`) → PR para `develop`; **sem merge**.
+- **Decisões:**
+  - Hono + `@hono/node-server`; app composto em `createApp()` (testável sem abrir porta) e `index.ts` só faz boot/shutdown.
+  - Env com Zod em `src/config/env.ts`; falha rápida com `EnvValidationError` que expõe apenas **variável + motivo**. `DATABASE_URL` é obrigatória; `PORT` default **8787** (não usa 3100/systemd).
+  - Erro padronizado do SRS: `{ error: { code, message, details, requestId } }`; `X-Request-Id` válido do cliente é ecoado, inválido é substituído (anti header/log injection).
+  - Logger JSON próprio com redaction por chave (`password`, `secret`, `token`, `authorization`, `cookie`, `session_id`, `ciphertext`) e sanitização de textos (Bearer, `chave=valor`, credenciais em URL Postgres). Log de request sem body/query/headers.
+  - Drizzle + `postgres` (pool lazy; **teste unitário não conecta**). Postgres 18 com `uuidv7()` nativo; `oauth_tokens` só tem ciphertext/IV/tag/key_version (sem token em claro).
+  - `docker-compose.yml` em **127.0.0.1:5434** (5433 já estava alocado pelo `doctor-pg-compose`, intocado) e volume em `/var/lib/postgresql` (mudança do Postgres 18+). Auth `trust` só local.
+  - `npm audit` no CI usa `--omit=optional` por travamento do npm 10.9.9 com peers opcionais; `.npmrc` fixa `legacy-peer-deps=true` (mesmo bug do arborist `edgesOut`). Versões pinadas no `package.json`.
+  - Gitleaks com action oficial `gitleaks/gitleaks-action@v3` (a action não aceita path/args; o job só dispara em `email-whatsapp/**`).
+- **Arquivos principais:**
+  - `email-whatsapp/backend/{package.json,tsconfig.json,tsup.config.ts,vitest.config.ts,eslint.config.mjs,drizzle.config.ts,.npmrc}`
+  - `email-whatsapp/backend/src/{index.ts,app.ts,config/env.ts,logger/logger.ts,http/**,metrics/registry.ts,routes/health.ts,db/{schema.ts,client.ts}}`
+  - `email-whatsapp/backend/drizzle/0000_adorable_bloodstorm.sql` + `drizzle/meta/**` + `drizzle/rollback/0000_init.down.sql` + `scripts/rollback.mjs`
+  - `email-whatsapp/backend/{docker-compose.yml,.env.example,.gitignore,README.md}` e `test/**`
+  - `.github/workflows/mailchat-ci.yml` (jobs `quality`/`e2e` preservados; novos `backend` e `secrets`)
+- **Endpoints:** `GET /health` → `200 {"status":"ok"}` + `X-Request-Id`; `GET /metrics` (Prometheus mínimo, E0.5).
+- **Gates (locais):**
+  - `npm ci` exit 0; `npm run typecheck` exit 0; `npm run lint` exit 0.
+  - `npm test` exit 0 — **21 passed, 2 skipped** (integração sem `TEST_DATABASE_URL`).
+  - `npm run build` exit 0 (tsup ESM, 13,39 KB).
+  - `npm audit --omit=optional --audit-level=high` exit 0 — **0 High/Critical**, 11 moderate (dev-only).
+  - `gitleaks` (histórico completo) e scan do backend: **no leaks found**.
+  - Smoke: `GET /health` 200 com header; sem `DATABASE_URL` o processo sai com exit 1 e imprime só nome da variável.
+  - Postgres real: `db:migrate` aplica 5 tabelas (`users`, `sessions`, `connected_accounts`, `oauth_tokens`, `sync_state`); integração 2/2; `db:rollback --yes` remove as tabelas e zera o journal; `db:migrate` reaplica (reversível).
+- **Como rodar:** `cp .env.example .env && docker compose up -d && npm run db:migrate && npm run dev`; health em `http://127.0.0.1:8787/health`. Rollback exige `--yes` e é bloqueado em produção.
+- **Lições (base do Aprendiz):**
+  - Imagem `postgres:18-alpine` exige mount em `/var/lib/postgresql` (não `/var/lib/postgresql/data`), senão o container reinicia.
+  - npm 10.9.9 quebra com peers opcionais do Vitest/Vite (`edgesOut`) e trava `npm audit` completo; `legacy-peer-deps` + `audit --omit=optional` resolve sem afetar gates.
+- **Pendências/riscos:**
+  - 11 vulnerabilidades **moderate dev-only** (drizzle-kit → esbuild 0.18 via `@esbuild-kit`; minimatch via typescript-eslint). Correção automática exigiria downgrade/`--force`; acompanhar upstream. Nenhuma High/Critical.
+  - Integração com Postgres não roda no CI (exigiria service); executável via `TEST_DATABASE_URL`.
+  - Gitleaks varre o histórico do repo (limitação da action); hoje limpo. Dependabot (SR-40) não foi adicionado por estar fora do escopo de arquivos desta issue.
+  - Registro da lição em `docs/conhecimento/` ficou pendente por restrição de escopo do commit; evidência registrada nesta entrada.
+  - `mailchat.service` e `TrilhaJr-app-android/` não foram tocados.
+

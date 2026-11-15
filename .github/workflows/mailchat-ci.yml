@@ -89,3 +89,61 @@ jobs:
           path: email-whatsapp/frontend/playwright-report
           retention-days: 7
           if-no-files-found: ignore
+
+  backend:
+    name: Backend — typecheck, lint, testes, build e audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: email-whatsapp/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22 + cache npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: email-whatsapp/backend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes unitários (sem Postgres)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # High/Critical = 0 (SR-40). --omit=optional evita o travamento do npm
+      # 10.9.9 ao auditar binários opcionais (ex.: esbuild), mantendo dev+prod.
+      - name: npm audit (High/Critical)
+        run: npm audit --omit=optional --audit-level=high
+
+  secrets:
+    name: Segredos (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (histórico completo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A action oficial não aceita caminho/args: o scan é do repositório.
+      # O job só dispara em mudanças de email-whatsapp/** (ver gatilho `paths`).
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Obrigatório apenas para organizações; vazio em conta pessoal.
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
