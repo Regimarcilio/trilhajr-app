@@ -24,3 +24,7 @@ Issues: [#12](https://github.com/Regimarcilio/trilhajr-app/issues/12) (planejame
 - [Plano de testes de segurança](../security/plano-testes-seguranca.md)
 - [Checklist de deploy](../security/checklist-deploy.md)
 - [Laudo inicial](../security/laudo-inicial.md)
+
+> **Nota:** os links para `../security/...` resolvem após o merge do PR #26 (branch `SEG`).
+> Enquanto os dois PRs não estiverem em `develop`, consulte a branch `SEG` para os documentos
+> de segurança.
