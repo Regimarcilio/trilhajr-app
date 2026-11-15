@@ -1,0 +1,113 @@
+/* MailChat — Banner styles with EX Technologies branding */
+.banner-ex {
+  --ex-red: #ff6b6b;
+  --ex-red-dark: #ee5a5a;
+  --ex-purple: #667eea;
+  --ex-purple-dark: #764ba2;
+  --ex-gradient: linear-gradient(45deg, var(--ex-purple), var(--ex-purple-dark));
+  --ex-badge-gradient: linear-gradient(45deg, var(--ex-red), var(--ex-red-dark));
+  --ex-bg: rgba(255, 255, 255, 0.95);
+  --ex-blur: blur(12px);
+  --ex-radius: 20px;
+  --ex-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.banner-ex .ex-badge {
+  display: inline-block;
+  background: var(--ex-badge-gradient);
+  color: #fff;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 1rem;
+}
+
+.banner-ex .brand-name {
+  font-size: 2.8rem;
+  font-weight: 800;
+  background: var(--ex-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 480px) {
+  .banner-ex .brand-name { font-size: 2rem; }
+}
+
+.banner-ex .brand-tagline {
+  color: #666;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+.banner-ex .features-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+}
+
+.banner-ex .features-list li {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.banner-ex .features-list li:last-child {
+  border-bottom: none;
+}
+
+.banner-ex .feature-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--ex-gradient);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.banner-ex .feature-icon::after {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.banner-ex .cta-button {
+  display: inline-block;
+  background: var(--ex-gradient);
+  color: #fff;
+  padding: 0.8rem 2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.banner-ex .cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+}
+
+.banner-ex .footer-note {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+  color: #999;
+  font-size: 0.85rem;
+}

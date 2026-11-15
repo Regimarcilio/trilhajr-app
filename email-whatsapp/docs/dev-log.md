@@ -175,3 +175,33 @@
 - **Restrições cumpridas:** nenhum deploy/container; nenhum unit instalado; `mailchat.service` (3100) intocado; nenhum segredo real; nenhuma chamada DNS/TLS/ACME; nenhuma alteração fora de `email-whatsapp/infra/**` e deste dev-log; nenhum merge.
 - **Pendências/riscos:** decisões P1..P14 do `runbook.md` (domínio/DNS, certbot/provedor TLS, destino offsite + custódia GPG, canal de alerta/on-call, custo, caminho de deploy, janela/go-no-go, geração/guarda de segredos, pacotes, Google OAuth/CASA, RPO/RTO, DPO/LGPD, Redis, firewall 3100/8787). Pinar `node:22-alpine` por digest no deploy. Backup usa credencial owner (`pg_dump` completo); avaliar role `pg_read_all_data` no futuro. Restore real e go-live continuam bloqueados até o gate KALIMASTER.
 - **Lições:** métrica de sucesso e de status em arquivos separados evita perder o `last_success` em falha e mantém o alerta de staleness útil; `nginx.conf.example` é um `nginx.conf` completo (não um site em `sites-enabled`), então o teste precisa substituir `pid`/logs/portas/certificados.
+
+- **2026-11-15 — Docs Google Cloud e LGPD (verificação/CASA)** — ISSUEMASTER (issue #24)
+
+Criados os documentos de preparação para verificação OAuth2 Google e conformidade LGPD:
+
+- \`docs/google-lgpd/README.md\` — índice e próximos passos
+- \`docs/google-lgpd/google-cloud-setup.md\` — passo a passo para configurar projeto Google, Gmail API, OAuth consent
+- \`docs/google-lgpd/checklist-user-inputs.md\` — pendências do usuário (domínio, DPO, backup, CASA, alarmes)
+- \`docs/google-lgpd/lgpd-ropa.md\` — Registro de Atividades de Tratamento de Dados conforme LGPD
+- \`docs/google-lgpd/lgpd-privacy-policy.md\` — rascunho de política de privacidade
+- \`docs/google-lgpd/lgpd-incident-runbook.md\` — runbook de resposta a incidentes LGPD
+
+**Pendências críticas do usuário (ver checklist):**
+- P1: Criar projeto Google Cloud, habilitar Gmail API, configurar consent screen
+- P1: Definir DPO, política de privacidade, domínio oficial
+- P1: Definir chave GPG e destino de backup
+
+Link da issue: #24
+
+- **2026-11-15 — Identidade visual e banner MailChat** — ISSUEMASTER (issue #30)
+
+Criada a identidade visual do projeto MailChat com branding da EX Technologies:
+
+- \`banner/index.html\` — página de boas-vindas com banner criativo (gradients PURPLE/RED, glassmorphism)
+- \`banner/banner.css\` — estilos CSS module separados
+- \`banner/MailChatBanner.tsx\` — componente React reutilizável
+
+O banner apresenta o nome **"MailChat"** como produto, com destaque "EX TECHNOLOGIES" como produtor. Design moderno com efeito glassmorphism, gradientes vibrantes e lista de features. Nome criativo escolhido que evoca conversas de e-mail como no WhatsApp.
+
+Link da issue: #30
