@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MailChat — timer diário do backup (MODELO)
+#
+# Destino: /etc/systemd/system/mailchat-backup.timer
+# Ativar (na janela): sudo systemctl enable --now mailchat-backup.timer
+# ─────────────────────────────────────────────────────────────────────────────
+[Unit]
+Description=Executa o backup criptografado do MailChat diariamente
+Documentation=https://github.com/Regimarcilio/trilhajr-app/tree/develop/email-whatsapp/infra/backup/restore.md
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=300
+AccuracySec=1min
+Unit=mailchat-backup.service
+
+[Install]
+WantedBy=timers.target

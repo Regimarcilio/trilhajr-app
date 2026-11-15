@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    service: mailchat
+    env: production
+
+rule_files:
+  - /etc/prometheus/rules/mailchat-alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["127.0.0.1:9093"]
+
+scrape_configs:
+  # Backend Hono — /metrics no loopback (não exposto pelo Nginx).
+  - job_name: mailchat-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:8787"]
+
+  # Host: disco, rede, load. Necessário para alertas MailchatDisk*.
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+
+  # Opcional: TLS/certificado e disponibilidade externa.
+  # Requer blackbox_exporter em 127.0.0.1:9115 com module https_2xx.
+  - job_name: blackbox-mailchat
+    metrics_path: /probe
+    params:
+      module: [https_2xx]
+    static_configs:
+      - targets:
+          - https://mailchat.example.com/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115

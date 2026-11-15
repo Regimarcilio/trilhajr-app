@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MailChat — backup criptografado do Postgres (MODELO)
+#
+# Destino:
+#   /etc/systemd/system/mailchat-backup.service
+#   /usr/local/sbin/mailchat-backup.sh  (cópia de infra/backup/backup.sh, 0750)
+#   /etc/mailchat/backup.env            (0600 root:root)
+#
+# Roda como root porque precisa do socket do Docker e do keyring GPG público.
+# Capabilities são removidas; o script só lê compose/env e escreve no destino.
+# ─────────────────────────────────────────────────────────────────────────────
+[Unit]
+Description=MailChat — backup criptografado do Postgres
+Documentation=https://github.com/Regimarcilio/trilhajr-app/tree/develop/email-whatsapp/infra/backup/restore.md
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/mailchat/backup.env
+ExecStart=/usr/local/sbin/mailchat-backup.sh
+StateDirectory=mailchat-backup
+ReadWritePaths=/var/backups/mailchat -/var/lib/node_exporter/textfile
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=30min
+
+# ── Sandbox ────────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mailchat-backup

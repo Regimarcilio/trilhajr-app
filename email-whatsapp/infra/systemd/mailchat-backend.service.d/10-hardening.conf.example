@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Drop-in de hardening/limites — MODELO
+#
+# Destino:
+#   /etc/systemd/system/mailchat-backend.service.d/10-hardening.conf
+#
+# Ajuste MemoryMax/TasksMax ao porte real. Aplicar com:
+#   sudo systemctl daemon-reload
+#   sudo systemctl restart mailchat-backend.service   # SOMENTE na janela
+# ─────────────────────────────────────────────────────────────────────────────
+[Service]
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=256
+LimitNOFILE=4096
+# Não herda file descriptors/sockets do PID 1.
+PrivateMounts=true
+# OOM: backend sacrificável antes do Postgres (score positivo = mais provável).
+OOMScoreAdjust=100

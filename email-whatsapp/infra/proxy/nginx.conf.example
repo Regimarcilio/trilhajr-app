@@ -1,0 +1,145 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MailChat — Nginx de borda (modelo standalone)
+#
+# Decisão: Nginx (já instalado no host, 1.24) em vez de Caddy.
+#   - Permite validar sintaxe offline com `nginx -t` sem instalar nada novo.
+#   - TLS 1.2/1.3, HSTS, redirect e proxy são explícitos e auditáveis.
+#   - Renovação automática fica com certbot/systemd timer (pendência de
+#     aprovação; ver runbook §8 e "PENDÊNCIAS DO USUÁRIO").
+#
+# Instalação (somente na janela aprovada):
+#   sudo install -m 0644 nginx.conf.example /etc/nginx/nginx.conf
+#   # substitua mailchat.example.com pelo domínio real
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Rotas:
+#   /            -> 127.0.0.1:3100  (mailchat.service — NÃO reiniciar)
+#   /api/*       -> 127.0.0.1:8787  (backend Hono)
+#   /health      -> 127.0.0.1:8787  (healthcheck)
+#   /metrics     -> 404 público      (Prometheus coleta direto no loopback)
+# ─────────────────────────────────────────────────────────────────────────────
+
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+error_log /var/log/nginx/error.log warn;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    server_tokens off;
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
+
+    # Anexos até 25 MB + margem de multipart (SR-25).
+    client_max_body_size 30m;
+    client_body_timeout 60s;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log /var/log/nginx/access.log main;
+
+    # WebSocket/upgrade (SSE/HMR do Next quando aplicável).
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    # ── HTTP → HTTPS ────────────────────────────────────────────────────────
+    server {
+        listen 80;
+        listen [::]:80;
+        server_name mailchat.example.com;
+
+        # ACME HTTP-01 (certbot webroot) — não redireciona.
+        location ^~ /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+            default_type "text/plain";
+            access_log off;
+        }
+
+        location / {
+            return 301 https://$host$request_uri;
+        }
+    }
+
+    # ── HTTPS ───────────────────────────────────────────────────────────────
+    server {
+        listen 443 ssl http2;
+        listen [::]:443 ssl http2;
+        server_name mailchat.example.com;
+
+        # Substituir pelo caminho real do certificado (Let's Encrypt ou corporativo).
+        ssl_certificate     /etc/letsencrypt/live/mailchat.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/mailchat.example.com/privkey.pem;
+
+        # SR-41: TLS 1.2+ obrigatório.
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+        ssl_prefer_server_ciphers off;
+        ssl_session_cache shared:MAILCHAT_SSL:10m;
+        ssl_session_timeout 1d;
+        ssl_session_tickets off;
+
+        # SR-41/SR-42. HSTS só deve ser ativado após validar HTTPS em todos os
+        # subdomínios (checklist 1.1). `preload` exige compromisso formal.
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+        add_header Content-Security-Policy "frame-ancestors 'none'" always;
+
+        # Métricas nunca públicas; scrape é feito no loopback do host.
+        location = /metrics {
+            return 404;
+        }
+
+        location = /health {
+            proxy_pass http://127.0.0.1:8787;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            access_log off;
+        }
+
+        location = /api {
+            return 308 /api/;
+        }
+
+        location /api/ {
+            proxy_pass http://127.0.0.1:8787;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+
+        # Frontend atual (mailchat.service na 3100). Não alterar o serviço.
+        location / {
+            proxy_pass http://127.0.0.1:3100;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_read_timeout 60s;
+        }
+    }
+}

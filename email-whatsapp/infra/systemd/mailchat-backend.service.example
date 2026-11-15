@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MailChat backend — unit systemd hardened (MODELO; não instalar nesta fase)
+#
+# Destino: /etc/systemd/system/mailchat-backend.service
+# Pré-requisitos (runbook §5):
+#   - usuário de sistema `mailchat-api` (sem shell, sem home gravável)
+#   - /opt/mailchat/backend/{dist,node_modules,package.json} root:root 0755
+#   - /etc/mailchat/backend.env 0600 root:root (EnvironmentFile)
+#   - Nginx na borda; backend escuta apenas 127.0.0.1:8787
+#
+# NÃO substitui/interage com `mailchat.service` (user unit, porta 3100).
+# ─────────────────────────────────────────────────────────────────────────────
+[Unit]
+Description=MailChat backend API (Hono/Node)
+Documentation=https://github.com/Regimarcilio/trilhajr-app/tree/develop/email-whatsapp/infra
+After=network-online.target docker.service
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=mailchat-api
+Group=mailchat-api
+WorkingDirectory=/opt/mailchat/backend
+EnvironmentFile=/etc/mailchat/backend.env
+ExecStart=/usr/bin/node /opt/mailchat/backend/dist/index.js
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+KillSignal=SIGTERM
+KillMode=mixed
+
+# ── Sandbox ────────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+PrivateMounts=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mailchat-backend
+
+[Install]
+WantedBy=multi-user.target

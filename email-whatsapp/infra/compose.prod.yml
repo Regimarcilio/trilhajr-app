@@ -1,0 +1,184 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MailChat — stack de produção (app + Postgres; Redis opcional por profile)
+#
+# Uso (somente em janela aprovada):
+#   cp .env.example .env && chmod 600 .env
+#   cp env/backend.env.example env/backend.env && chmod 600 env/backend.env
+#   docker compose -f compose.prod.yml config          # validação
+#   docker compose -f compose.prod.yml up -d --build
+#
+# Garantias:
+#   - Postgres/Redis não publicam portas; vivem só na rede `data` (interna).
+#   - App publica apenas 127.0.0.1:8787 (consumido pelo Nginx no host).
+#   - App tem egress separado para Gmail API; DB fica sem rota para a internet.
+#   - Nenhum segredo literal: env_file 0600 + interpolação do `.env` 0600.
+#   - App roda read-only, non-root 10001, sem capabilities e com /tmp tmpfs.
+#   - Logs vão para o journald (retenção/centralização definidas no host).
+#
+# Redis NÃO sobe por padrão. Habilite apenas com justificativa do SRS (P-06 /
+# arquitetura §1.7): múltiplas instâncias, fila persistente ou rate limit
+# compartilhado. Instância única usa rate limit em memória.
+#   docker compose -f compose.prod.yml --profile redis up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: mailchat-prod
+
+x-logging: &default-logging
+  driver: journald
+  options:
+    tag: "mailchat-{{.Name}}"
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mailchat}
+      POSTGRES_USER: ${POSTGRES_USER:-mailchat_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD em infra/.env (0600)}
+      # Senha do papel de aplicação, lida apenas pelo init script (primeiro boot).
+      MAILCHAT_APP_USER: ${MAILCHAT_APP_USER:-mailchat_app}
+      MAILCHAT_APP_PASSWORD: ${MAILCHAT_APP_PASSWORD:?defina MAILCHAT_APP_PASSWORD em infra/.env (0600)}
+      # Conexões TCP (app) exigem scram; socket local permanece trust dentro do
+      # container (necessário ao entrypoint/init). O container não expõe porta.
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      # Postgres 18+ usa /var/lib/postgresql (PGDATA em subdiretório versionado).
+      - mailchat-pgdata:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - data
+    security_opt:
+      - no-new-privileges:true
+    shm_size: "256mb"
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging: *default-logging
+
+  # One-off de migrations (perfil `migrate`), executado como owner/DDL dentro da
+  # rede privada. Não sobe junto com a stack.
+  #   docker compose -f compose.prod.yml --profile migrate run --rm migrate
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: ../backend
+      dockerfile: ../infra/backend.Dockerfile
+      target: build
+    image: mailchat-backend-migrate:${MAILCHAT_IMAGE_TAG:-local}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - path: ./env/migrate.env
+        required: false
+    networks:
+      - data
+    command: ["npm", "run", "db:migrate"]
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  app:
+    build:
+      context: ../backend
+      dockerfile: ../infra/backend.Dockerfile
+    image: mailchat-backend:${MAILCHAT_IMAGE_TAG:-local}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      # Opcional para permitir `docker compose config` offline; o preflight do
+      # runbook exige o arquivo antes de qualquer `up`.
+      - path: ./env/backend.env
+        required: false
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "8787"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      # Somente loopback: o Nginx do host faz o TLS e o roteamento.
+      - "127.0.0.1:8787:8787"
+    networks:
+      # `egress` tem prioridade maior: vira o default gateway do app, para que
+      # chamadas à Gmail API não tentem sair pela rede `data` (internal).
+      data:
+        priority: 100
+      egress:
+        priority: 1000
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "10001:10001"
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: "1.0"
+    stop_grace_period: 20s
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging: *default-logging
+
+  # Opcional — ver justificativa no cabeçalho. Sem persistência: adequado a
+  # rate limit/locks. Para fila persistente, adicione volume e reveja a política.
+  redis:
+    profiles: ["redis"]
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--save",
+        "",
+        "--appendonly",
+        "no",
+        "--maxmemory",
+        "128mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+      ]
+    networks:
+      - data
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *default-logging
+
+networks:
+  # Sem rota para fora: apenas app ↔ postgres/redis.
+  data:
+    internal: true
+  # Egress do app para Google APIs. Não publica portas.
+  egress:
+    driver: bridge
+
+volumes:
+  mailchat-pgdata:
+    name: mailchat-pgdata
