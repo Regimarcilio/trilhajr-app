@@ -100,7 +100,7 @@
 ## 2026-11-15 — Fundação do backend MailChat (F0) — @backdev (issue #14)
 
 - **Objetivo:** criar `email-whatsapp/backend/` de pé (Node 22 + TS strict + Hono), `/health`, envelope de erro, env Zod, Drizzle/Postgres e CI — **sem** OAuth2, sync, envio ou alterações no frontend/TrilhaJr.
-- **Branch/PR:** `DEV` (a partir de `origin/develop`) → PR para `develop`; **sem merge**.
+- **Branch/PR:** `DEV` (a partir de `origin/develop`) → [PR #27](https://github.com/Regimarcilio/trilhajr-app/pull/27) para `develop`; **sem merge**.
 - **Decisões:**
   - Hono + `@hono/node-server`; app composto em `createApp()` (testável sem abrir porta) e `index.ts` só faz boot/shutdown.
   - Env com Zod em `src/config/env.ts`; falha rápida com `EnvValidationError` que expõe apenas **variável + motivo**. `DATABASE_URL` é obrigatória; `PORT` default **8787** (não usa 3100/systemd).
