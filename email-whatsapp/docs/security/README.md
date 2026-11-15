@@ -17,3 +17,7 @@ Issues: [#13](https://github.com/Regimarcilio/trilhajr-app/issues/13) (seguranç
 ## Documentação relacionada (planejamento)
 
 - [SRS](../gmail/SRS-gmail-oauth2.md) · [Arquitetura](../gmail/arquitetura.md) · [ADRs](../gmail/adr/)
+
+> **Nota:** os links para `../gmail/...` resolvem após o merge do PR #25 (branch `ISSUE`).
+> Enquanto os dois PRs não estiverem em `develop`, consulte a branch `ISSUE` para o
+> planejamento (SRS, arquitetura e ADRs).
