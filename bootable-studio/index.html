@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bootable-studio - Gera imagens de pendrive bootável</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>💿 bootable-studio</h1>
+      <p>Gere imagens de disco bootável a partir de arquivos ISO 9660/El Torito diretamente no navegador</p>
+    </header>
+
+    <section class="upload-area" id="uploadArea">
+      <input type="file" id="isoInput" accept=".iso" hidden>
+      <button id="browseBtn">Selecionar ISO</button>
+      <p class="hint">Arrastar e soltar um arquivo .iso aqui</p>
+    </section>
+
+    <section class="results-area" id="resultsArea" style="display: none;">
+      <div class="info-panel">
+        <h2>📋 Informações da ISO</h2>
+        <div id="isoInfo">
+          <!-- Preenchido dinamicamente -->
+        </div>
+      </div>
+
+      <div class="build-controls">
+        <h2>🔨 Modo de Build</h2>
+        <div class="mode-options">
+          <label class="mode-option raw">
+            <input type="radio" name="buildMode" value="raw" checked>
+            <span>Modo RAW (DD)</span>
+            <span class="reason" id="rawReason">Cópia byte-a-byte</span>
+          </label>
+          <label class="mode-option chainload">
+            <input type="radio" name="buildMode" value="chainload">
+            <span>Modo Chainload</span>
+            <span class="reason" id="chainloadReason">MBR de chainload para BIOS legado</span>
+          </label>
+        </div>
+        <label class="pad-option">
+          <input type="checkbox" id="padToMiB">
+          <span>Alinhar para MiB</span>
+          <span class="small">Tamanho final será múltiplo de MiB</span>
+        </label>
+        <button id="buildBtn" disabled>Gerar Imagem .img</button>
+      </div>
+
+      <div class="warnings-panel" id="warningsPanel" style="display: none;">
+        <h2>⚠️ Avisos</h2>
+        <ul id="warningsList"></ul>
+      </div>
+
+      <div class="download-area" id="downloadArea" style="display: none;">
+        <h2>📥 Download</h2>
+        <p>Imagem gerada pronta para gravação no pendrive</p>
+        <button id="downloadBtn" disabled>Download .img</button>
+        <p class="file-info" id="fileInfo"></p>
+      </div>
+    </section>
+
+    <footer>
+      <p>Bootable Studio v1.0.0 | Funciona no Chrome, Firefox, Edge, Safari modernos</p>
+      <p>Todos os processamentos acontecem no seu navegador - seus arquivos ISO nunca saem do computador</p>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
