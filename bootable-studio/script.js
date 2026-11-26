@@ -20,6 +20,7 @@ const bootResult = document.getElementById('bootResult');
 const bootResultText = document.getElementById('bootResultText');
 const rawRadio = document.querySelector('input[value="raw"]');
 const chainloadRadio = document.querySelector('input[value="chainload"]');
+const autoRadio = document.querySelector('input[value="auto"]');
 const padToMiBCheck = document.getElementById('padToMiB');
 const rawReason = document.getElementById('rawReason');
 const chainloadReason = document.getElementById('chainloadReason');
@@ -48,6 +49,7 @@ function updateRawReason() {
   if (rawRadio.checked) {
     rawReason.style.display = 'inline';
     chainloadReason.style.display = 'none';
+    autoReason.style.display = 'none';
   } else {
     rawReason.style.display = 'none';
   }
@@ -57,8 +59,19 @@ function updateChainloadReason() {
   if (chainloadRadio.checked) {
     chainloadReason.style.display = 'inline';
     rawReason.style.display = 'none';
+    autoReason.style.display = 'none';
   } else {
     chainloadReason.style.display = 'none';
+  }
+}
+
+function updateAutoReason() {
+  if (autoRadio.checked) {
+    autoReason.style.display = 'inline';
+    rawReason.style.display = 'none';
+    chainloadReason.style.display = 'none';
+  } else {
+    autoReason.style.display = 'none';
   }
 }
 
@@ -90,7 +103,7 @@ isoInput.addEventListener('change', async (e) => {
       ${isoInfo.boot.chainloadEntry ? '<p><strong>Entrada chainload disponível:</strong> Sim</p>' : ''}
     `;
 
-    // Update mode recommendations
+    // Update mode recommendations based on ISO structure
     updateModeRecommendations(isoInfo);
 
     showSection('resultsArea', true);
@@ -111,8 +124,11 @@ function updateModeRecommendations(info) {
     chainloadRadio.disabled = true;
     chainloadRadio.checked = false;
     rawRadio.checked = true;
+    autoRadio.disabled = true;
+    autoRadio.checked = false;
     updateRawReason();
     updateChainloadReason();
+    updateAutoReason();
     buildBtn.textContent = 'Gerar Imagem .img (modo RAW - isohybrid)';
     buildBtn.disabled = false;
     return;
@@ -121,13 +137,17 @@ function updateModeRecommendations(info) {
   if (info.boot.chainloadEntry) {
     rawReason.textContent = 'ISO não-híbrida com entrada El Torito no-emulation';
     chainloadReason.textContent = 'Será criado MBR de chainload para boot BIOS legado';
+    autoReason.textContent = 'Modo automático - escolhe o melhor baseado na estrutura';
     rawRadio.disabled = false;
     chainloadRadio.disabled = false;
-    rawRadio.checked = true;
+    autoRadio.disabled = false;
+    autoRadio.checked = true;
+    rawRadio.checked = false;
     chainloadRadio.checked = false;
     updateRawReason();
     updateChainloadReason();
-    buildBtn.textContent = 'Gerar Imagem .img';
+    updateAutoReason();
+    buildBtn.textContent = 'Gerar Imagem .img (modo automático)';
     buildBtn.disabled = false;
     return;
   }
@@ -135,12 +155,16 @@ function updateModeRecommendations(info) {
   // Default: no chainload entry available
   rawReason.textContent = 'ISO sem entrada El Torito "no emulation" - somente modo RAW (boot CD/DVD)';
   chainloadReason.textContent = 'Não disponível - usar modo RAW ou ferramenta externa (Rufus/Etcher)';
+  autoReason.textContent = 'Modo automático - será usado RAW (boot CD/DVD)';
   rawRadio.disabled = false;
   chainloadRadio.disabled = true;
-  chainloadRadio.checked = false;
+  autoRadio.disabled = false;
+  autoRadio.checked = true;
   rawRadio.checked = true;
+  chainloadRadio.checked = false;
   updateRawReason();
   updateChainloadReason();
+  updateAutoReason();
   buildBtn.textContent = 'Gerar Imagem .img (modo RAW)';
   buildBtn.disabled = true;
 }
@@ -182,6 +206,11 @@ buildBtn.addEventListener('click', async () => {
     testBootBtn.disabled = false;
     testBootBtn.textContent = `Testar Boot (${builtMode})`;
 
+    // Show mode info
+    const modeLabels = { raw: 'RAW (DD)', chainload: 'Chainload', auto: 'Auto' };
+    buildBtn.setAttribute('data-last-mode', builtMode);
+    buildBtn.textContent = `Último modo: ${modeLabels[builtMode] || builtMode}`;
+
     buildBtn.textContent = 'Gerar Imagem .img';
 
   } catch (error) {
@@ -215,7 +244,7 @@ async function loadV86Wasm() {
     await import('./vendor/v86/v86.wasm');
     v86WasmLoaded = true;
     
-    // Load seabios.bin - need to read it as ArrayBuffer
+    // Load seabios.bin
     const seabiosResponse = await fetch('./vendor/v86/seabios.bin');
     const seabiosBuffer = await seabiosResponse.arrayBuffer();
     
@@ -247,10 +276,6 @@ async function testBoot() {
     const imgBlob = builtBlob.blob;
     const imgArrayBuffer = await imgBlob.arrayBuffer();
     
-    // Create a synthetic ISO-like structure for v86
-    // For chainload mode, we pass the built blob as hda
-    // For raw mode, we set up CD-ROM
-    
     const mode = builtMode;
     
     // Initialize v86 emulator
@@ -267,6 +292,7 @@ async function testBoot() {
             showBootResult('SUCCESS', 'OK recebido na serial', 'success');
             testBootBtn.disabled = false;
             testBootBtn.textContent = 'Testar Boot';
+            clearTimeout(testBootBtn._timeoutId);
           }
         }
       },
@@ -274,6 +300,7 @@ async function testBoot() {
         showBootResult('FAILED', 'Emulador encerrou antes de completar', 'error');
         testBootBtn.disabled = false;
         testBootBtn.textContent = 'Testar Boot';
+        clearTimeout(testBootBtn._timeoutId);
       }
     });
     
@@ -285,8 +312,15 @@ async function testBoot() {
         buffer: imgArrayBuffer
       };
       v86.boot('hda');
-    } else {
+    } else if (mode === 'raw') {
       // Raw/CD-ROM mode
+      v86.cdrom = {
+        buffer: imgArrayBuffer,
+        ejected: false
+      };
+      v86.boot('cdrom');
+    } else {
+      // Auto mode - try chainload first, then raw
       v86.cdrom = {
         buffer: imgArrayBuffer,
         ejected: false
@@ -305,7 +339,6 @@ async function testBoot() {
       testBootBtn.textContent = 'Testar Boot';
     }, 20000);
     
-    // Store timeout reference for cleanup
     testBootBtn._timeoutId = timeoutId;
     
   } catch (error) {
@@ -317,7 +350,7 @@ async function testBoot() {
 }
 
 function showBootResult(status, message, type) {
-  const modeInfo = builtMode === 'chainload' ? 'modo chainload' : 'modo raw';
+  const modeInfo = builtMode === 'chainload' ? 'modo chainload' : builtMode === 'raw' ? 'modo raw' : 'modo auto';
   
   const statusClasses = {
     success: 'success',
@@ -327,10 +360,10 @@ function showBootResult(status, message, type) {
   };
   
   const typeStyles = {
-    success: 'background: #4caf50; color: white; padding: 10px; border-radius: 4px; font-weight: bold;',
-    error: 'background: #f44336; color: white; padding: 10px; border-radius: 4px; font-weight: bold;',
-    loading: 'background: #ff9800; color: white; padding: 10x; border-radius: 4px; font-weight: bold;',
-    fallback: 'background: #9c27b0; color: white; padding: 10px; border-radius: 4px; font-weight: bold;'
+    success: 'background: #e8f5e9; border: 1px solid #4caf50; color: #2e7d32; padding: 12px; border-radius: 4px; font-weight: bold; margin: 15px 0;',
+    error: 'background: #ffebee; border: 1px solid #f44336; color: #c62828; padding: 12px; border-radius: 4px; font-weight: bold; margin: 15px 0;',
+    loading: 'background: #fff3e0; border: 1px solid #ff9800; color: #e65100; padding: 12px; border-radius: 4px; font-weight: bold; margin: 15px 0;',
+    fallback: 'background: #e3f2fd; border: 1px solid #9c27b0; color: #7b1fa2; padding: 12px; border-radius: 4px; font-weight: bold; margin: 15px 0;'
   };
   
   bootResult.style.cssText = typeStyles[type] || typeStyles.error;
