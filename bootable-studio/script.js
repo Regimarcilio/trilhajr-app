@@ -1,4 +1,4 @@
-/**
+/** 
  * bootable-studio - Client-side ISO inspection and build
  * All processing happens in the browser - no files leave the user's computer
  */
@@ -15,6 +15,9 @@ const warningsPanel = document.getElementById('warningsPanel');
 const warningsList = document.getElementById('warningsList');
 const downloadArea = document.getElementById('downloadArea');
 const fileInfo = document.getElementById('fileInfo');
+const testBootBtn = document.getElementById('testBootBtn');
+const bootResult = document.getElementById('bootResult');
+const bootResultText = document.getElementById('bootResultText');
 const rawRadio = document.querySelector('input[value="raw"]');
 const chainloadRadio = document.querySelector('input[value="chainload"]');
 const padToMiBCheck = document.getElementById('padToMiB');
@@ -27,6 +30,7 @@ let isoInfo = null;
 let builtBlob = null;
 let builtMode = null;
 let builtFilename = null;
+let v86WasmLoaded = false;
 
 // Import modules using ES modules
 import { inspectIso } from './src/iso.js';
@@ -141,17 +145,6 @@ function updateModeRecommendations(info) {
   buildBtn.disabled = true;
 }
 
-// Build Mode Selection
-buildModeRadios.forEach(radio => {
-  radio.addEventListener('change', () => {
-    if (radio.value === 'raw') {
-      buildBtn.textContent = 'Gerar Imagem .img (modo RAW)';
-    } else {
-      buildBtn.textContent = 'Gerar Imagem .img (modo Chainload)';
-    }
-  });
-});
-
 // Build Image
 buildBtn.addEventListener('click', async () => {
   if (!isoInfo) return;
@@ -161,6 +154,8 @@ buildBtn.addEventListener('click', async () => {
 
   showSection('warningsPanel', false);
   showSection('downloadArea', false);
+  showSection('bootArea', false);
+  testBootBtn.disabled = true;
   buildBtn.disabled = true;
   buildBtn.textContent = 'Processando...';
 
@@ -183,6 +178,10 @@ buildBtn.addEventListener('click', async () => {
     downloadBtn.disabled = false;
     showSection('downloadArea', true);
 
+    // Enable boot test button
+    testBootBtn.disabled = false;
+    testBootBtn.textContent = `Testar Boot (${builtMode})`;
+
     buildBtn.textContent = 'Gerar Imagem .img';
 
   } catch (error) {
@@ -201,15 +200,163 @@ downloadBtn.addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = url;
   a.download = builtFilename;
-  a.textContent = 'Download';
-  document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 });
 
-// Initial state
+// === T006: Boot Test Integration ===
+
+async function loadV86Wasm() {
+  if (v86WasmLoaded) return;
+  
+  try {
+    // Load the v86 WASM module
+    await import('./vendor/v86/v86.wasm');
+    v86WasmLoaded = true;
+    
+    // Load seabios.bin - need to read it as ArrayBuffer
+    const seabiosResponse = await fetch('./vendor/v86/seabios.bin');
+    const seabiosBuffer = await seabiosResponse.arrayBuffer();
+    
+    window.seabios = new Uint8Array(seabiosBuffer);
+    console.log('v86 WASM and seabios loaded successfully');
+  } catch (error) {
+    console.error('Failed to load v86 resources:', error);
+    showBootResult('Falha', 'Não foi possível carregar o emulador v86. Verifique se os arquivos vendor/v86/ estão disponíveis.', 'error');
+  }
+}
+
+async function testBoot() {
+  if (!builtBlob) {
+    alert('Nenhuma imagem foi gerada ainda. Gere uma imagem primeiro.');
+    return;
+  }
+
+  // Show loading state
+  showBootResult('Carregando...', '', 'loading');
+  testBootBtn.disabled = true;
+  testBootBtn.textContent = 'Testando...';
+
+  try {
+    await loadV86Wasm();
+    
+    if (!v86WasmLoaded) throw new Error('v86 WASM não carregou');
+    
+    // Get the built blob and create a reference for v86
+    const imgBlob = builtBlob.blob;
+    const imgArrayBuffer = await imgBlob.arrayBuffer();
+    
+    // Create a synthetic ISO-like structure for v86
+    // For chainload mode, we pass the built blob as hda
+    // For raw mode, we set up CD-ROM
+    
+    const mode = builtMode;
+    
+    // Initialize v86 emulator
+    const v86 = new window.V86({
+      memory: 8 * 1024 * 1024, // 8MB
+      bios: window.seabios,
+      setup: imgArrayBuffer,  // The built .img as setup disk
+      onSerialOutput: (byte) => {
+        // Check for "OK" in serial output
+        serialBuffer.push(byte);
+        if (serialBuffer.length >= 2) {
+          const recent = serialBuffer.slice(-2).join('');
+          if (recent === 'OK') {
+            showBootResult('SUCCESS', 'OK recebido na serial', 'success');
+            testBootBtn.disabled = false;
+            testBootBtn.textContent = 'Testar Boot';
+          }
+        }
+      },
+      onExit: () => {
+        showBootResult('FAILED', 'Emulador encerrou antes de completar', 'error');
+        testBootBtn.disabled = false;
+        testBootBtn.textContent = 'Testar Boot';
+      }
+    });
+    
+    // Configure based on mode
+    if (mode === 'chainload') {
+      // Chainload: boot from hda (hard drive)
+      v86.hd = {
+        size: 512, // 512 sectors
+        buffer: imgArrayBuffer
+      };
+      v86.boot('hda');
+    } else {
+      // Raw/CD-ROM mode
+      v86.cdrom = {
+        buffer: imgArrayBuffer,
+        ejected: false
+      };
+      v86.boot('cdrom');
+    }
+    
+    // Start the emulation
+    v86.run();
+    
+    // Set timeout - if we don't get "OK" within 20 seconds, it's a failure
+    const timeoutId = setTimeout(() => {
+      v86.stop();
+      showBootResult('FAILED', 'Timeout após 20s - "OK" não recebido na serial', 'error');
+      testBootBtn.disabled = false;
+      testBootBtn.textContent = 'Testar Boot';
+    }, 20000);
+    
+    // Store timeout reference for cleanup
+    testBootBtn._timeoutId = timeoutId;
+    
+  } catch (error) {
+    console.error('Boot test error:', error);
+    showBootResult('ERRO', error.message, 'error');
+    testBootBtn.disabled = false;
+    testBootBtn.textContent = 'Testar Boot';
+  }
+}
+
+function showBootResult(status, message, type) {
+  const modeInfo = builtMode === 'chainload' ? 'modo chainload' : 'modo raw';
+  
+  const statusClasses = {
+    success: 'success',
+    error: 'error', 
+    loading: 'loading',
+    fallback: 'fallback'
+  };
+  
+  const typeStyles = {
+    success: 'background: #4caf50; color: white; padding: 10px; border-radius: 4px; font-weight: bold;',
+    error: 'background: #f44336; color: white; padding: 10px; border-radius: 4px; font-weight: bold;',
+    loading: 'background: #ff9800; color: white; padding: 10x; border-radius: 4px; font-weight: bold;',
+    fallback: 'background: #9c27b0; color: white; padding: 10px; border-radius: 4px; font-weight: bold;'
+  };
+  
+  bootResult.style.cssText = typeStyles[type] || typeStyles.error;
+  bootResultText.textContent = `${status} - ${modeInfo}: ${message}`;
+  bootResult.style.display = 'block';
+  
+  // Auto-hide after 8 seconds for success/error, keep loading until manual
+  if (type !== 'loading') {
+    setTimeout(() => {
+      bootResult.style.display = 'none';
+    }, 8000);
+  }
+}
+
+// Initialize serial buffer for OK detection
+let serialBuffer = [];
+
+// Wire up boot test button
+testBootBtn.addEventListener('click', testBoot);
+
+// Initial state setup
 showSection('resultsArea', false);
 showSection('uploadArea', true);
 buildBtn.disabled = true;
 downloadBtn.disabled = true;
+testBootBtn.disabled = true;
+
+// Hide boot result area initially
+bootResult.style.display = 'none';
